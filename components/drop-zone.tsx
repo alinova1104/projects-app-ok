@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useDragDrop } from "./drag-drop-provider"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner" // sonner'dan toast import edildi
 import { cn } from "@/lib/utils"
 
 interface DropZoneProps {
@@ -14,7 +14,7 @@ interface DropZoneProps {
 
 export function DropZone({ status, children, className }: DropZoneProps) {
   const { draggedItem, dropZone, setDropZone } = useDragDrop()
-  const { toast } = useToast()
+  // const { toast } = useToast() // Kaldırıldı
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
@@ -29,10 +29,9 @@ export function DropZone({ status, children, className }: DropZoneProps) {
     e.preventDefault()
     if (draggedItem && draggedItem.status !== status) {
       // Burada normalde API çağrısı yapılır
-      toast({
-        title: "Proje durumu güncellendi",
+      toast.success("Proje durumu güncellendi", {
+        // sonner toast kullanıldı
         description: `${draggedItem.name} projesi ${status} durumuna taşındı`,
-        type: "success",
       })
     }
     setDropZone(null)

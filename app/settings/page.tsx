@@ -12,47 +12,33 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { User, Bell, Shield, Palette, Save, Upload } from "lucide-react"
 import { ChangePasswordDialog } from "@/components/change-password-dialog"
 import { toast } from "sonner" // sonner'dan toast import edildi
+import { useActionState } from "react"
+import { updateSettings } from "@/app/settings/actions" // Server Action import edildi
+import { getDb } from "@/lib/db" // Veriyi sunucuda çekmek için db'den import edildi
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState({
-    // Profil ayarları
-    name: "Admin User",
-    email: "admin@example.com",
-    phone: "+90 555 123 4567",
-    avatar: "/placeholder.svg?height=64&width=64",
+  const initialSettings = getDb().settings // Başlangıç ayarları db'den çekildi
+  const [settings, setSettings] = useState(initialSettings)
+  const [state, formAction] = useActionState(updateSettings, null)
 
-    // Bildirim ayarları
-    emailNotifications: true,
-    pushNotifications: false,
-    projectUpdates: true,
-    teamUpdates: true,
-    deadlineReminders: true,
-
-    // Görünüm ayarları
-    theme: "light",
-    language: "tr",
-    timezone: "Europe/Istanbul",
-
-    // Güvenlik ayarları
-    twoFactorAuth: false,
-    sessionTimeout: "30",
-  })
-
-  const handleSave = () => {
-    // Burada normalde API'ye ayarlar gönderilir
-    toast.success("Ayarlar kaydedildi", {
-      description: "Tüm ayarlarınız başarıyla güncellendi",
-    })
-  }
-
-  const updateSetting = (key: string, value: any) => {
-    setSettings((prev) => ({ ...prev, [key]: value }))
-  }
+  // Form gönderildikten sonra toast göstermek için
+  useState(() => {
+    if (state?.success) {
+      toast.success(state.message)
+      // Ayarlar güncellendiğinde UI'ı senkronize etmek için db'den tekrar çekebiliriz
+      // Ancak useActionState ile form gönderildiği için revalidatePath zaten tetiklenir
+      // ve bir sonraki render'da güncel veriler gelir.
+    } else if (state?.success === false) {
+      toast.error(state.message)
+    }
+  }, [state])
 
   const handlePhotoUpload = () => {
     toast.info("Fotoğraf yükleniyor", {
-      description: "Profil fotoğrafınız güncelleniyor",
+      description: "Profil fotoğrafınız güncelleniyor (Bu özellik şu an için simüle edilmiştir).",
     })
+    // Gerçek bir uygulamada burada dosya yükleme API çağrısı yapılır
+    // ve başarılı olursa settings.avatar güncellenir.
   }
 
   return (
@@ -65,7 +51,8 @@ export default function SettingsPage() {
             <p className="text-sm md:text-base text-muted-foreground">Hesap ve uygulama ayarlarınızı yönetin</p>
           </div>
           <Button
-            onClick={handleSave}
+            type="submit"
+            form="settings-form" // Form ID'si ile eşleştirildi
             className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 w-full sm:w-auto"
           >
             <Save className="w-4 h-4 mr-2" />
@@ -76,7 +63,7 @@ export default function SettingsPage() {
 
       {/* Content */}
       <div className="flex-1 overflow-auto p-4 md:p-6">
-        <div className="max-w-4xl mx-auto space-y-6">
+        <form id="settings-form" action={formAction} className="max-w-4xl mx-auto space-y-6">
           {/* Profil Ayarları */}
           <Card className="bg-card text-card-foreground">
             <CardHeader>
@@ -98,26 +85,38 @@ export default function SettingsPage() {
                     Fotoğraf Yükle
                   </Button>
                   <p className="text-xs text-muted-foreground mt-1">JPG, PNG veya GIF. Maksimum 2MB.</p>
+                  <input type="hidden" name="avatar" value={settings.avatar} /> {/* Avatar URL'sini göndermek için */}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="name">Ad Soyad</Label>
-                  <Input id="name" value={settings.name} onChange={(e) => updateSetting("name", e.target.value)} />
+                  <Input
+                    id="name"
+                    name="name"
+                    value={settings.name}
+                    onChange={(e) => setSettings((prev) => ({ ...prev, name: e.target.value }))}
+                  />
                 </div>
                 <div>
                   <Label htmlFor="email">E-posta</Label>
                   <Input
                     id="email"
+                    name="email"
                     type="email"
                     value={settings.email}
-                    onChange={(e) => updateSetting("email", e.target.value)}
+                    onChange={(e) => setSettings((prev) => ({ ...prev, email: e.target.value }))}
                   />
                 </div>
                 <div>
                   <Label htmlFor="phone">Telefon</Label>
-                  <Input id="phone" value={settings.phone} onChange={(e) => updateSetting("phone", e.target.value)} />
+                  <Input
+                    id="phone"
+                    name="phone"
+                    value={settings.phone}
+                    onChange={(e) => setSettings((prev) => ({ ...prev, phone: e.target.value }))}
+                  />
                 </div>
               </div>
             </CardContent>
@@ -140,8 +139,9 @@ export default function SettingsPage() {
                     <p className="text-sm text-muted-foreground">Önemli güncellemeler için e-posta alın</p>
                   </div>
                   <Switch
+                    name="emailNotifications"
                     checked={settings.emailNotifications}
-                    onCheckedChange={(checked) => updateSetting("emailNotifications", checked)}
+                    onCheckedChange={(checked) => setSettings((prev) => ({ ...prev, emailNotifications: checked }))}
                   />
                 </div>
 
@@ -153,8 +153,9 @@ export default function SettingsPage() {
                     <p className="text-sm text-muted-foreground">Tarayıcı bildirimleri alın</p>
                   </div>
                   <Switch
+                    name="pushNotifications"
                     checked={settings.pushNotifications}
-                    onCheckedChange={(checked) => updateSetting("pushNotifications", checked)}
+                    onCheckedChange={(checked) => setSettings((prev) => ({ ...prev, pushNotifications: checked }))}
                   />
                 </div>
 
@@ -166,8 +167,9 @@ export default function SettingsPage() {
                     <p className="text-sm text-muted-foreground">Proje durumu değişikliklerinde bildirim alın</p>
                   </div>
                   <Switch
+                    name="projectUpdates"
                     checked={settings.projectUpdates}
-                    onCheckedChange={(checked) => updateSetting("projectUpdates", checked)}
+                    onCheckedChange={(checked) => setSettings((prev) => ({ ...prev, projectUpdates: checked }))}
                   />
                 </div>
 
@@ -179,8 +181,9 @@ export default function SettingsPage() {
                     <p className="text-sm text-muted-foreground">Yeni ekip üyesi eklendiğinde bildirim alın</p>
                   </div>
                   <Switch
+                    name="teamUpdates"
                     checked={settings.teamUpdates}
-                    onCheckedChange={(checked) => updateSetting("teamUpdates", checked)}
+                    onCheckedChange={(checked) => setSettings((prev) => ({ ...prev, teamUpdates: checked }))}
                   />
                 </div>
 
@@ -192,8 +195,9 @@ export default function SettingsPage() {
                     <p className="text-sm text-muted-foreground">Proje deadline'ları yaklaştığında hatırlatma alın</p>
                   </div>
                   <Switch
+                    name="deadlineReminders"
                     checked={settings.deadlineReminders}
-                    onCheckedChange={(checked) => updateSetting("deadlineReminders", checked)}
+                    onCheckedChange={(checked) => setSettings((prev) => ({ ...prev, deadlineReminders: checked }))}
                   />
                 </div>
               </div>
@@ -213,7 +217,11 @@ export default function SettingsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="theme">Tema</Label>
-                  <Select value={settings.theme} onValueChange={(value) => updateSetting("theme", value)}>
+                  <Select
+                    name="theme"
+                    value={settings.theme}
+                    onValueChange={(value) => setSettings((prev) => ({ ...prev, theme: value }))}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -227,7 +235,11 @@ export default function SettingsPage() {
 
                 <div>
                   <Label htmlFor="language">Dil</Label>
-                  <Select value={settings.language} onValueChange={(value) => updateSetting("language", value)}>
+                  <Select
+                    name="language"
+                    value={settings.language}
+                    onValueChange={(value) => setSettings((prev) => ({ ...prev, language: value }))}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -240,7 +252,11 @@ export default function SettingsPage() {
 
                 <div>
                   <Label htmlFor="timezone">Saat Dilimi</Label>
-                  <Select value={settings.timezone} onValueChange={(value) => updateSetting("timezone", value)}>
+                  <Select
+                    name="timezone"
+                    value={settings.timezone}
+                    onValueChange={(value) => setSettings((prev) => ({ ...prev, timezone: value }))}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -271,8 +287,9 @@ export default function SettingsPage() {
                   <p className="text-sm text-muted-foreground">Hesabınız için ek güvenlik katmanı ekleyin</p>
                 </div>
                 <Switch
+                  name="twoFactorAuth"
                   checked={settings.twoFactorAuth}
-                  onCheckedChange={(checked) => updateSetting("twoFactorAuth", checked)}
+                  onCheckedChange={(checked) => setSettings((prev) => ({ ...prev, twoFactorAuth: checked }))}
                 />
               </div>
 
@@ -281,8 +298,9 @@ export default function SettingsPage() {
               <div>
                 <Label htmlFor="sessionTimeout">Oturum Zaman Aşımı (dakika)</Label>
                 <Select
+                  name="sessionTimeout"
                   value={settings.sessionTimeout}
-                  onValueChange={(value) => updateSetting("sessionTimeout", value)}
+                  onValueChange={(value) => setSettings((prev) => ({ ...prev, sessionTimeout: value }))}
                 >
                   <SelectTrigger className="w-48">
                     <SelectValue />
@@ -301,7 +319,7 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </form>
       </div>
     </div>
   )

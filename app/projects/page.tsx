@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -8,7 +9,6 @@ import Link from "next/link"
 import { DraggableProjectCard } from "@/components/draggable-project-card"
 import { DropZone } from "@/components/drop-zone"
 import { getDb } from "@/lib/db" // Veriyi sunucuda çekmek için db'den import edildi
-import { useState } from "react" // Client component'e dönüştürmek için useState eklendi
 
 export default function ProjectsPage() {
   const { projects } = getDb() // Veri doğrudan sunucuda çekildi

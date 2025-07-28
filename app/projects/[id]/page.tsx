@@ -1,4 +1,6 @@
-import { notFound } from "next/navigation"
+"use client" // Client Component olarak işaretlendi
+
+import { notFound, useParams } from "next/navigation" // useParams import edildi
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -20,15 +22,13 @@ import {
 import { EditProjectDialog } from "@/components/edit-project-dialog"
 import { getDb } from "@/lib/db" // Veriyi sunucuda çekmek için db'den import edildi
 
-interface ProjectDetailProps {
-  params: {
-    id: string
-  }
-}
+export default function ProjectDetail() {
+  // params prop'u kaldırıldı, useParams kullanılacak
+  const params = useParams()
+  const id = params.id as string // useParams'tan id alındı
 
-export default function ProjectDetail({ params }: ProjectDetailProps) {
   const { projects } = getDb() // Veri doğrudan sunucuda çekildi
-  const project = projects.find((p) => p.id === params.id)
+  const project = projects.find((p) => p.id === id) // id useParams'tan alındı
 
   if (!project) {
     notFound()
