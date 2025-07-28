@@ -1,6 +1,6 @@
-// Bu, v0 ortamında değişikliklerin oturum boyunca kalıcı görünmesini sağlayan basit bir bellek içi depolamadır.
-// Gerçek bir uygulamada, veritabanı (örneğin PostgreSQL, MongoDB) kullanılmalıdır.
-// Sayfayı tamamen yenilediğinizde veya yeni bir oturum başlattığınızda bellek içi veriler sıfırlanacaktır.
+// Bu dosya, v0 ortamında verilerinizi simüle etmek için geçici olarak kullanılmaktadır.
+// Gerçek bir PHP MVC backend'de, bu veriler bir veritabanında (MySQL, PostgreSQL vb.) saklanacaktır.
+// Frontend'deki api.ts dosyası, bu db.ts'yi doğrudan kullanmayacak, bunun yerine HTTP istekleri gönderecektir.
 
 interface Project {
   id: string

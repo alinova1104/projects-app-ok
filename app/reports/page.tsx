@@ -1,45 +1,79 @@
+"use client"
+
+import { CardDescription } from "@/components/ui/card"
+
+import { Button } from "@/components/ui/button"
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { BarChart, LineChart, PieChart } from "@/components/ui/chart"
-import { getDb } from "@/lib/db" // Veriyi sunucuda çekmek için db'den import edildi
-import { FileText, TrendingUp, Users } from "lucide-react"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { FileText, Users, FolderOpen, BarChart } from "lucide-react"
+import { useEffect, useState } from "react"
+import { projectApi, teamApi } from "@/api" // api.ts'den import edildi
+import { toast } from "sonner"
+import { ExportDialog } from "@/components/export-dialog"
 
 export default function ReportsPage() {
-  const { projects, teamMembers } = getDb() // Veri doğrudan sunucuda çekildi
+  const [projects, setProjects] = useState<any[]>([])
+  const [teamMembers, setTeamMembers] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Proje Durumlarına Göre Dağılım
-  const projectStatusData = Object.entries(
-    projects.reduce(
-      (acc, project) => {
-        acc[project.status] = (acc[project.status] || 0) + 1
-        return acc
-      },
-      {} as Record<string, number>,
-    ),
-  ).map(([name, value]) => ({ name, value }))
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true)
+      setError(null)
+      const [projectsRes, teamMembersRes] = await Promise.all([projectApi.getProjects(), teamApi.getTeamMembers()])
 
-  // Kategoriye Göre Proje Sayısı
-  const projectCategoryData = Object.entries(
-    projects.reduce(
-      (acc, project) => {
-        acc[project.category] = (acc[project.category] || 0) + 1
-        return acc
-      },
-      {} as Record<string, number>,
-    ),
-  ).map(([name, value]) => ({ name, value }))
+      if (projectsRes.success && projectsRes.data) {
+        setProjects(projectsRes.data)
+      } else {
+        setError(projectsRes.message || "Projeler yüklenirken hata oluştu.")
+        toast.error("Hata", { description: projectsRes.message || "Projeler yüklenirken hata oluştu." })
+      }
 
-  // Ortalama Proje İlerlemesi
-  const totalProgress = projects.reduce((sum, project) => sum + project.progress, 0)
-  const averageProgress = projects.length > 0 ? (totalProgress / projects.length).toFixed(2) : 0
+      if (teamMembersRes.success && teamMembersRes.data) {
+        setTeamMembers(teamMembersRes.data)
+      } else {
+        setError(teamMembersRes.message || "Ekip üyeleri yüklenirken hata oluştu.")
+        toast.error("Hata", { description: teamMembersRes.message || "Ekip üyeleri yüklenirken hata oluştu." })
+      }
+      setLoading(false)
+    }
+    fetchData()
+  }, [])
 
-  // Toplam Bütçe
-  const totalBudget = projects.reduce((sum, project) => sum + project.budget, 0)
+  if (loading) {
+    return (
+      <div className="flex flex-col h-full items-center justify-center">
+        <div className="h-16 w-16 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent" />
+        <p className="mt-4 text-muted-foreground">Raporlar yükleniyor...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col h-full items-center justify-center text-red-500">
+        <p>{error}</p>
+        <Button onClick={() => window.location.reload()} className="mt-4">
+          Tekrar Dene
+        </Button>
+      </div>
+    )
+  }
+
+  // Genel İstatistikleri hesapla
+  const totalProjects = projects.length
+  const activeProjects = projects.filter((p) => p.status === "Aktif").length
+  const completedProjects = projects.filter((p) => p.status === "Tamamlandı").length
+  const totalBudget = projects.reduce((sum, p) => sum + p.budget, 0)
+  const avgProgress = totalProjects > 0 ? projects.reduce((sum, p) => sum + p.progress, 0) / totalProjects : 0
+
+  // En Yüksek Bütçeli Projeler
+  const topBudgetProjects = [...projects].sort((a, b) => b.budget - a.budget).slice(0, 5)
 
   // En Aktif Ekip Üyeleri (Proje Sayısına Göre)
-  const topTeamMembers = teamMembers
-    .sort((a, b) => b.projectCount - a.projectCount)
-    .slice(0, 5)
-    .map((member) => ({ name: member.name, value: member.projectCount }))
+  const activeTeamMembers = [...teamMembers].sort((a, b) => b.projectCount - a.projectCount).slice(0, 5)
 
   return (
     <div className="flex flex-col h-full">
@@ -48,93 +82,152 @@ export default function ReportsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-xl md:text-2xl font-bold text-foreground">Raporlar</h1>
-            <p className="text-sm md:text-base text-muted-foreground">Proje ve ekip performansına genel bakış</p>
+            <p className="text-sm md:text-base text-muted-foreground">Detaylı proje ve ekip raporları</p>
           </div>
+          <ExportDialog data={{ projects, teamMembers }} />
         </div>
       </header>
 
       {/* Content */}
       <div className="flex-1 overflow-auto p-4 md:p-6">
         <div className="max-w-6xl mx-auto space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Toplam Proje</CardTitle>
-                <FileText className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{projects.length}</div>
-                <p className="text-xs text-muted-foreground">Tüm zamanların toplamı</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Ortalama İlerleme</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{averageProgress}%</div>
-                <p className="text-xs text-muted-foreground">Tüm projelerin ortalaması</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Toplam Bütçe</CardTitle>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  className="h-4 w-4 text-muted-foreground"
-                >
-                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                </svg>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">₺{totalBudget.toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground">Tüm projelerin toplam bütçesi</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Ekip Üyesi Sayısı</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{teamMembers.length}</div>
-                <p className="text-xs text-muted-foreground">Aktif ekip üyesi sayısı</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Proje Durumlarına Göre Dağılım</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <PieChart className="aspect-[4/3]" data={projectStatusData} />
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Kategoriye Göre Proje Sayısı</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <BarChart className="aspect-[4/3]" data={projectCategoryData} />
-              </CardContent>
-            </Card>
-          </div>
-
+          {/* Genel Bakış */}
           <Card>
             <CardHeader>
-              <CardTitle>En Aktif Ekip Üyeleri</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart className="w-5 h-5" />
+                Genel Bakış
+              </CardTitle>
+              <CardDescription>Uygulamanızdaki genel istatistikler</CardDescription>
             </CardHeader>
             <CardContent>
-              <LineChart className="aspect-[4/3]" data={topTeamMembers} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="flex flex-col items-center justify-center p-4 bg-muted/50 rounded-lg">
+                  <FolderOpen className="w-8 h-8 text-primary mb-2" />
+                  <span className="text-2xl font-bold text-foreground">{totalProjects}</span>
+                  <span className="text-sm text-muted-foreground">Toplam Proje</span>
+                </div>
+                <div className="flex flex-col items-center justify-center p-4 bg-muted/50 rounded-lg">
+                  <Users className="w-8 h-8 text-primary mb-2" />
+                  <span className="text-2xl font-bold text-foreground">{teamMembers.length}</span>
+                  <span className="text-sm text-muted-foreground">Toplam Ekip Üyesi</span>
+                </div>
+                <div className="flex flex-col items-center justify-center p-4 bg-muted/50 rounded-lg">
+                  <span className="text-2xl font-bold text-foreground">₺{totalBudget.toLocaleString()}</span>
+                  <span className="text-sm text-muted-foreground">Toplam Bütçe</span>
+                </div>
+                <div className="flex flex-col items-center justify-center p-4 bg-muted/50 rounded-lg">
+                  <span className="text-2xl font-bold text-foreground">{avgProgress.toFixed(1)}%</span>
+                  <span className="text-sm text-muted-foreground">Ortalama İlerleme</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Proje Durumları */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FolderOpen className="w-5 h-5" />
+                Proje Durumları
+              </CardTitle>
+              <CardDescription>Projelerin mevcut durumlarına göre dağılımı</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Durum</TableHead>
+                    <TableHead className="text-right">Proje Sayısı</TableHead>
+                    <TableHead className="text-right">Yüzde (%)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell>Aktif</TableCell>
+                    <TableCell className="text-right">{activeProjects}</TableCell>
+                    <TableCell className="text-right">
+                      {((activeProjects / totalProjects) * 100 || 0).toFixed(1)}%
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>Tamamlandı</TableCell>
+                    <TableCell className="text-right">{completedProjects}</TableCell>
+                    <TableCell className="text-right">
+                      {((completedProjects / totalProjects) * 100 || 0).toFixed(1)}%
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>Beklemede</TableCell>
+                    <TableCell className="text-right">{totalProjects - activeProjects - completedProjects}</TableCell>
+                    <TableCell className="text-right">
+                      {(((totalProjects - activeProjects - completedProjects) / totalProjects) * 100 || 0).toFixed(1)}%
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* En Yüksek Bütçeli Projeler */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                En Yüksek Bütçeli Projeler
+              </CardTitle>
+              <CardDescription>En yüksek bütçeye sahip ilk 5 proje</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Proje Adı</TableHead>
+                    <TableHead>Kategori</TableHead>
+                    <TableHead className="text-right">Bütçe (₺)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {topBudgetProjects.map((project) => (
+                    <TableRow key={project.id}>
+                      <TableCell className="font-medium">{project.name}</TableCell>
+                      <TableCell>{project.category}</TableCell>
+                      <TableCell className="text-right">₺{project.budget.toLocaleString()}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* En Aktif Ekip Üyeleri */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                En Aktif Ekip Üyeleri
+              </CardTitle>
+              <CardDescription>En çok projede yer alan ilk 5 ekip üyesi</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Ad Soyad</TableHead>
+                    <TableHead>Rol</TableHead>
+                    <TableHead className="text-right">Proje Sayısı</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {activeTeamMembers.map((member) => (
+                    <TableRow key={member.id}>
+                      <TableCell className="font-medium">{member.name}</TableCell>
+                      <TableCell>{member.role}</TableCell>
+                      <TableCell className="text-right">{member.projectCount}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </div>

@@ -20,18 +20,57 @@ import {
   Target,
 } from "lucide-react"
 import { EditProjectDialog } from "@/components/edit-project-dialog"
-import { getDb } from "@/lib/db" // Veriyi sunucuda çekmek için db'den import edildi
+import { useEffect, useState } from "react"
+import { projectApi } from "@/api" // api.ts'den import edildi
+import { toast } from "sonner"
 
 export default function ProjectDetail() {
-  // params prop'u kaldırıldı, useParams kullanılacak
   const params = useParams()
   const id = params.id as string // useParams'tan id alındı
 
-  const { projects } = getDb() // Veri doğrudan sunucuda çekildi
-  const project = projects.find((p) => p.id === id) // id useParams'tan alındı
+  const [project, setProject] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchProject = async () => {
+    setLoading(true)
+    setError(null)
+    const response = await projectApi.getProjectById(id)
+    if (response.success && response.data) {
+      setProject(response.data)
+    } else {
+      setError(response.message || "Proje yüklenirken bir hata oluştu.")
+      toast.error("Hata", { description: response.message || "Proje yüklenirken bir hata oluştu." })
+    }
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    fetchProject()
+  }, [id])
+
+  if (loading) {
+    return (
+      <div className="flex flex-col h-full items-center justify-center">
+        <div className="h-16 w-16 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent" />
+        <p className="mt-4 text-muted-foreground">Proje yükleniyor...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col h-full items-center justify-center text-red-500">
+        <p>{error}</p>
+        <Button onClick={() => window.location.reload()} className="mt-4">
+          Tekrar Dene
+        </Button>
+      </div>
+    )
+  }
 
   if (!project) {
-    notFound()
+    notFound() // Proje bulunamazsa Next.js'in notFound'unu kullan
   }
 
   const difficultyColors = {
@@ -73,7 +112,7 @@ export default function ProjectDetail() {
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <EditProjectDialog project={project} />
+            <EditProjectDialog project={project} onProjectUpdated={fetchProject} /> {/* Callback eklendi */}
             {project.liveUrl && (
               <Button variant="outline" size="sm" className="flex-1 sm:flex-none bg-transparent" asChild>
                 <a href={project.liveUrl} target="_blank" rel="noopener noreferrer">

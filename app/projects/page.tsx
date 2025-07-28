@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -8,13 +8,33 @@ import { Search, Filter, Plus, FolderOpen } from "lucide-react"
 import Link from "next/link"
 import { DraggableProjectCard } from "@/components/draggable-project-card"
 import { DropZone } from "@/components/drop-zone"
-import { getDb } from "@/lib/db" // Veriyi sunucuda çekmek için db'den import edildi
+import { projectApi } from "@/api" // api.ts'den import edildi
+import { toast } from "sonner"
 
 export default function ProjectsPage() {
-  const { projects } = getDb() // Veri doğrudan sunucuda çekildi
+  const [projects, setProjects] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [selectedStatus, setSelectedStatus] = useState("all")
+
+  const fetchProjects = async () => {
+    setLoading(true)
+    setError(null)
+    const response = await projectApi.getProjects()
+    if (response.success && response.data) {
+      setProjects(response.data)
+    } else {
+      setError(response.message || "Projeler yüklenirken bir hata oluştu.")
+      toast.error("Hata", { description: response.message || "Projeler yüklenirken bir hata oluştu." })
+    }
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    fetchProjects()
+  }, [])
 
   const filteredProjects = projects.filter((project) => {
     const matchesSearch =
@@ -27,6 +47,26 @@ export default function ProjectsPage() {
 
   const categories = Array.from(new Set(projects.map((p) => p.category)))
   const statuses = Array.from(new Set(projects.map((p) => p.status)))
+
+  if (loading) {
+    return (
+      <div className="flex flex-col h-full items-center justify-center">
+        <div className="h-16 w-16 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent" />
+        <p className="mt-4 text-muted-foreground">Projeler yükleniyor...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col h-full items-center justify-center text-red-500">
+        <p>{error}</p>
+        <Button onClick={fetchProjects} className="mt-4">
+          Tekrar Dene
+        </Button>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col h-full">
