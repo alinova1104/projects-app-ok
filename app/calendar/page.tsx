@@ -6,15 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CalendarIcon, ChevronLeft, ChevronRight, Clock, AlertCircle, CheckCircle } from "lucide-react"
-import projectsData from "@/data/projects.json"
 import { AddEventDialog } from "@/components/add-event-dialog"
-import { useToast } from "@/hooks/use-toast"
+import { getDb } from "@/lib/db" // Veriyi sunucuda çekmek için db'den import edildi
+import { toast } from "sonner" // sonner'dan toast import edildi
 
 export default function CalendarPage() {
-  const { projects } = projectsData
+  const { projects } = getDb() // Veri doğrudan sunucuda çekildi
   const [currentDate, setCurrentDate] = useState(new Date())
   const [viewType, setViewType] = useState("month")
-  const { toast } = useToast()
 
   // Takvim için tarih hesaplamaları
   const today = new Date()
@@ -53,8 +52,9 @@ export default function CalendarPage() {
   const getEventsForDate = (date: Date) => {
     const dateStr = date.toISOString().split("T")[0]
     return projects.filter((project) => {
-      const createdDate = project.createdAt.split("T")[0] || project.createdAt
-      const deadlineDate = project.deadline.split("T")[0] || project.deadline
+      // Projelerin createdAt veya deadline alanlarını etkinlik olarak kabul et
+      const createdDate = project.createdAt?.split("T")[0] || project.createdAt
+      const deadlineDate = project.deadline?.split("T")[0] || project.deadline
       return createdDate === dateStr || deadlineDate === dateStr
     })
   }
@@ -96,19 +96,15 @@ export default function CalendarPage() {
     }
     setCurrentDate(newDate)
 
-    toast({
-      title: "Takvim güncellendi",
+    toast.info("Takvim güncellendi", {
       description: `${monthNames[newDate.getMonth()]} ${newDate.getFullYear()} görüntüleniyor`,
-      type: "success",
     })
   }
 
   const goToToday = () => {
     setCurrentDate(new Date())
-    toast({
-      title: "Bugüne gidildi",
+    toast.info("Bugüne gidildi", {
       description: "Takvim bugünün tarihine ayarlandı",
-      type: "success",
     })
   }
 
@@ -148,7 +144,7 @@ export default function CalendarPage() {
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
           {/* Ana Takvim */}
           <div className="xl:col-span-3">
-            <Card>
+            <Card className="bg-card text-card-foreground">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
@@ -199,7 +195,7 @@ export default function CalendarPage() {
                         </div>
                         <div className="space-y-1">
                           {events.slice(0, 2).map((project) => {
-                            const isDeadline = project.deadline.split("T")[0] === day.date.toISOString().split("T")[0]
+                            const isDeadline = project.deadline?.split("T")[0] === day.date.toISOString().split("T")[0]
                             return (
                               <div
                                 key={project.id}
@@ -229,7 +225,7 @@ export default function CalendarPage() {
           {/* Yan Panel */}
           <div className="space-y-6">
             {/* Bugünün Etkinlikleri */}
-            <Card>
+            <Card className="bg-card text-card-foreground">
               <CardHeader>
                 <CardTitle className="text-lg">Bugün</CardTitle>
                 <CardDescription>
@@ -261,7 +257,7 @@ export default function CalendarPage() {
             </Card>
 
             {/* Yaklaşan Deadline'lar */}
-            <Card>
+            <Card className="bg-card text-card-foreground">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <AlertCircle className="w-4 h-4" />
@@ -299,7 +295,7 @@ export default function CalendarPage() {
             </Card>
 
             {/* Proje İstatistikleri */}
-            <Card>
+            <Card className="bg-card text-card-foreground">
               <CardHeader>
                 <CardTitle className="text-lg">Bu Ay</CardTitle>
               </CardHeader>

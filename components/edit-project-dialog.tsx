@@ -1,8 +1,5 @@
 "use client"
-
-import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -18,7 +15,10 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Edit } from "lucide-react"
-import { toast } from "sonner" // sonner'dan toast import edildi
+import { toast } from "sonner"
+import { useActionState } from "react"
+import { updateProject } from "@/app/projects/[id]/actions"
+import { useRouter } from "next/navigation"
 
 interface EditProjectDialogProps {
   project: any
@@ -26,7 +26,11 @@ interface EditProjectDialogProps {
 
 export function EditProjectDialog({ project }: EditProjectDialogProps) {
   const [open, setOpen] = useState(false)
+  const router = useRouter()
+  const [state, formAction] = useActionState(updateProject, { success: false, message: "" })
+
   const [formData, setFormData] = useState({
+    id: project.id, // Proje ID'si eklendi
     name: project.name,
     description: project.description,
     category: project.category,
@@ -37,21 +41,19 @@ export function EditProjectDialog({ project }: EditProjectDialogProps) {
     budget: project.budget.toString(),
     deadline: project.deadline,
   })
-  // useToast kaldırıldı, doğrudan toast kullanılıyor
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-
-    setTimeout(() => {
-      toast.success("Proje güncellendi", {
-        description: `${formData.name} projesi başarıyla güncellendi`,
-      })
-
+  useEffect(() => {
+    if (state.success) {
+      toast.success(state.message)
       setOpen(false)
-    }, 1000)
-  }
+      router.refresh() // Veriyi yeniden çekmek için
+    } else if (state.message) {
+      toast.error(state.message)
+    }
+  }, [state, router])
 
-  const updateField = (field: string, value: string) => {
+  const updateField = (field: string, value: any) => {
+    // value tipi any olarak güncellendi
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -72,16 +74,25 @@ export function EditProjectDialog({ project }: EditProjectDialogProps) {
           </DialogTitle>
           <DialogDescription>Proje bilgilerini güncelleyin</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit}>
+        <form action={formAction}>
+          {" "}
+          {/* formAction buraya eklendi */}
+          <input type="hidden" name="id" value={formData.id} /> {/* Hidden input ile ID gönderildi */}
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="name">Proje Adı</Label>
-              <Input id="name" value={formData.name} onChange={(e) => updateField("name", e.target.value)} />
+              <Input
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={(e) => updateField("name", e.target.value)}
+              />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="description">Açıklama</Label>
               <Textarea
                 id="description"
+                name="description"
                 value={formData.description}
                 onChange={(e) => updateField("description", e.target.value)}
                 rows={3}
@@ -101,6 +112,7 @@ export function EditProjectDialog({ project }: EditProjectDialogProps) {
                     <SelectItem value="Desktop Uygulama">Desktop Uygulama</SelectItem>
                   </SelectContent>
                 </Select>
+                <input type="hidden" name="category" value={formData.category} /> {/* Hidden input eklendi */}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="difficulty">Zorluk</Label>
@@ -114,6 +126,7 @@ export function EditProjectDialog({ project }: EditProjectDialogProps) {
                     <SelectItem value="Zor">Zor</SelectItem>
                   </SelectContent>
                 </Select>
+                <input type="hidden" name="difficulty" value={formData.difficulty} /> {/* Hidden input eklendi */}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -129,6 +142,7 @@ export function EditProjectDialog({ project }: EditProjectDialogProps) {
                     <SelectItem value="Yüksek">Yüksek</SelectItem>
                   </SelectContent>
                 </Select>
+                <input type="hidden" name="priority" value={formData.priority} /> {/* Hidden input eklendi */}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="status">Durum</Label>
@@ -142,6 +156,7 @@ export function EditProjectDialog({ project }: EditProjectDialogProps) {
                     <SelectItem value="Tamamlandı">Tamamlandı</SelectItem>
                   </SelectContent>
                 </Select>
+                <input type="hidden" name="status" value={formData.status} /> {/* Hidden input eklendi */}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -149,6 +164,7 @@ export function EditProjectDialog({ project }: EditProjectDialogProps) {
                 <Label htmlFor="progress">İlerleme (%)</Label>
                 <Input
                   id="progress"
+                  name="progress"
                   type="number"
                   min="0"
                   max="100"
@@ -160,6 +176,7 @@ export function EditProjectDialog({ project }: EditProjectDialogProps) {
                 <Label htmlFor="budget">Bütçe (₺)</Label>
                 <Input
                   id="budget"
+                  name="budget"
                   type="number"
                   value={formData.budget}
                   onChange={(e) => updateField("budget", e.target.value)}
@@ -170,6 +187,7 @@ export function EditProjectDialog({ project }: EditProjectDialogProps) {
               <Label htmlFor="deadline">Bitiş Tarihi</Label>
               <Input
                 id="deadline"
+                name="deadline"
                 type="date"
                 value={formData.deadline}
                 onChange={(e) => updateField("deadline", e.target.value)}

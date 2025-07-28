@@ -7,14 +7,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Search, Mail, Phone, Calendar, FolderOpen, Users, MessageCircle, User } from "lucide-react"
-import projectsData from "@/data/projects.json"
 import { AddTeamMemberDialog } from "@/components/add-team-member-dialog"
-import { useToast } from "@/hooks/use-toast"
+import { getDb } from "@/lib/db" // Veriyi sunucuda çekmek için db'den import edildi
 
 export default function TeamPage() {
-  const { teamMembers } = projectsData
+  const { teamMembers } = getDb() // Veri doğrudan sunucuda çekildi
   const [searchTerm, setSearchTerm] = useState("")
-  const { toast } = useToast()
 
   const filteredMembers = teamMembers.filter(
     (member) =>
@@ -23,20 +21,13 @@ export default function TeamPage() {
       member.email.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
+  // Bu fonksiyonlar artık sadece simülasyon amaçlıdır, gerçek bir mesajlaşma/profil sistemi entegrasyonu gerektirir.
   const handleViewProfile = (member: any) => {
-    toast({
-      title: "Profil görüntüleniyor",
-      description: `${member.name} profiline yönlendiriliyorsunuz`,
-      type: "success",
-    })
+    console.log(`${member.name} profilini görüntüle`)
   }
 
   const handleSendMessage = (member: any) => {
-    toast({
-      title: "Mesaj gönderiliyor",
-      description: `${member.name} ile mesajlaşma başlatılıyor`,
-      type: "success",
-    })
+    console.log(`${member.name} ile mesajlaşma başlat`)
   }
 
   return (
@@ -69,7 +60,10 @@ export default function TeamPage() {
       <div className="flex-1 overflow-auto p-4 md:p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
           {filteredMembers.map((member) => (
-            <Card key={member.id} className="hover:shadow-lg transition-shadow duration-200">
+            <Card
+              key={member.id}
+              className="hover:shadow-lg transition-shadow duration-200 bg-card text-card-foreground"
+            >
               <CardHeader className="text-center">
                 <Avatar className="w-20 h-20 mx-auto mb-4">
                   <AvatarImage src={member.avatar || "/placeholder.svg"} />

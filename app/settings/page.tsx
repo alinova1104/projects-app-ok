@@ -37,7 +37,6 @@ export default function SettingsPage() {
     twoFactorAuth: false,
     sessionTimeout: "30",
   })
-  // useToast kaldırıldı, doğrudan toast kullanılıyor
 
   const handleSave = () => {
     // Burada normalde API'ye ayarlar gönderilir
@@ -79,7 +78,7 @@ export default function SettingsPage() {
       <div className="flex-1 overflow-auto p-4 md:p-6">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Profil Ayarları */}
-          <Card>
+          <Card className="bg-card text-card-foreground">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="w-5 h-5" />
@@ -125,7 +124,7 @@ export default function SettingsPage() {
           </Card>
 
           {/* Bildirim Ayarları */}
-          <Card>
+          <Card className="bg-card text-card-foreground">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Bell className="w-5 h-5" />
@@ -202,7 +201,7 @@ export default function SettingsPage() {
           </Card>
 
           {/* Görünüm Ayarları */}
-          <Card>
+          <Card className="bg-card text-card-foreground">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Palette className="w-5 h-5" />
@@ -257,7 +256,7 @@ export default function SettingsPage() {
           </Card>
 
           {/* Güvenlik Ayarları */}
-          <Card>
+          <Card className="bg-card text-card-foreground">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="w-5 h-5" />

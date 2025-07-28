@@ -1,8 +1,5 @@
 "use client"
-
-import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -18,10 +15,18 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Calendar } from "lucide-react"
-import { toast } from "sonner" // sonner'dan toast import edildi
+import { toast } from "sonner"
+import { useActionState } from "react"
+import { addEvent } from "@/app/calendar/actions"
+import { useRouter } from "next/navigation"
+import { getDb } from "@/lib/db" // Proje listesini çekmek için
 
 export function AddEventDialog() {
   const [open, setOpen] = useState(false)
+  const router = useRouter()
+  const [state, formAction] = useActionState(addEvent, { success: false, message: "" })
+  const { projects } = getDb() // Proje listesini çek
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -30,27 +35,17 @@ export function AddEventDialog() {
     type: "",
     project: "",
   })
-  // useToast kaldırıldı, doğrudan toast kullanılıyor
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!formData.title || !formData.date || !formData.type) {
-      toast.error("Eksik bilgi", {
-        description: "Lütfen tüm zorunlu alanları doldurun",
-      })
-      return
-    }
-
-    setTimeout(() => {
-      toast.success("Etkinlik eklendi", {
-        description: `${formData.title} etkinliği takvime eklendi`,
-      })
-
+  useEffect(() => {
+    if (state.success) {
+      toast.success(state.message)
       setFormData({ title: "", description: "", date: "", time: "", type: "", project: "" })
       setOpen(false)
-    }, 1000)
-  }
+      router.refresh() // Veriyi yeniden çekmek için
+    } else if (state.message) {
+      toast.error(state.message)
+    }
+  }, [state, router])
 
   const updateField = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -73,12 +68,15 @@ export function AddEventDialog() {
           </DialogTitle>
           <DialogDescription>Takvime yeni bir etkinlik ekleyin</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit}>
+        <form action={formAction}>
+          {" "}
+          {/* formAction buraya eklendi */}
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="title">Etkinlik Başlığı *</Label>
               <Input
                 id="title"
+                name="title" // name prop'u eklendi
                 value={formData.title}
                 onChange={(e) => updateField("title", e.target.value)}
                 placeholder="Örn: Sprint Planlama Toplantısı"
@@ -89,6 +87,7 @@ export function AddEventDialog() {
               <Label htmlFor="description">Açıklama</Label>
               <Textarea
                 id="description"
+                name="description" // name prop'u eklendi
                 value={formData.description}
                 onChange={(e) => updateField("description", e.target.value)}
                 placeholder="Etkinlik detayları..."
@@ -100,6 +99,7 @@ export function AddEventDialog() {
                 <Label htmlFor="date">Tarih *</Label>
                 <Input
                   id="date"
+                  name="date" // name prop'u eklendi
                   type="date"
                   value={formData.date}
                   onChange={(e) => updateField("date", e.target.value)}
@@ -110,6 +110,7 @@ export function AddEventDialog() {
                 <Label htmlFor="time">Saat</Label>
                 <Input
                   id="time"
+                  name="time" // name prop'u eklendi
                   type="time"
                   value={formData.time}
                   onChange={(e) => updateField("time", e.target.value)}
@@ -131,6 +132,7 @@ export function AddEventDialog() {
                   <SelectItem value="training">Eğitim</SelectItem>
                 </SelectContent>
               </Select>
+              <input type="hidden" name="type" value={formData.type} /> {/* Hidden input eklendi */}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="project">İlgili Proje</Label>
@@ -139,13 +141,14 @@ export function AddEventDialog() {
                   <SelectValue placeholder="Proje seçin (opsiyonel)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ecommerce">E-Ticaret Platformu</SelectItem>
-                  <SelectItem value="fitness">Mobil Fitness Uygulaması</SelectItem>
-                  <SelectItem value="chatbot">AI Chatbot Sistemi</SelectItem>
-                  <SelectItem value="crm">CRM Sistemi</SelectItem>
-                  <SelectItem value="blog">Blog Platformu</SelectItem>
+                  {projects.map((project) => (
+                    <SelectItem key={project.id} value={project.id}>
+                      {project.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+              <input type="hidden" name="project" value={formData.project} /> {/* Hidden input eklendi */}
             </div>
           </div>
           <DialogFooter>

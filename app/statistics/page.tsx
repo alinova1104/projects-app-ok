@@ -1,79 +1,56 @@
-"use client"
-
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { TrendingUp, TrendingDown, FolderOpen, DollarSign, Target, Award, Activity, Calendar } from "lucide-react"
-import projectsData from "@/data/projects.json"
-import { ExportDialog } from "@/components/export-dialog"
+import { Separator } from "@/components/ui/separator"
+import {
+  Users,
+  FolderOpen,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  DollarSign,
+  TrendingUp,
+  CalendarDays,
+  Code,
+} from "lucide-react"
+import { getDb } from "@/lib/db" // Veriyi sunucuda çekmek için db'den import edildi
 
 export default function StatisticsPage() {
-  const { projects, teamMembers } = projectsData
+  const { projects, teamMembers } = getDb() // Veri doğrudan sunucuda çekildi
 
   // Genel İstatistikler
   const totalProjects = projects.length
   const activeProjects = projects.filter((p) => p.status === "Aktif").length
   const completedProjects = projects.filter((p) => p.status === "Tamamlandı").length
   const pendingProjects = projects.filter((p) => p.status === "Beklemede").length
+  const totalTeamMembers = teamMembers.length
+
+  // Bütçe İstatistikleri
   const totalBudget = projects.reduce((sum, p) => sum + p.budget, 0)
-  const averageProgress = Math.round(projects.reduce((sum, p) => sum + p.progress, 0) / projects.length)
+  const avgBudgetPerProject = totalProjects > 0 ? totalBudget / totalProjects : 0
 
-  // Kategori İstatistikleri
-  const categoryStats = projects.reduce(
-    (acc, project) => {
-      acc[project.category] = (acc[project.category] || 0) + 1
-      return acc
-    },
-    {} as Record<string, number>,
-  )
+  // İlerleme İstatistikleri
+  const avgProgress = totalProjects > 0 ? projects.reduce((sum, p) => sum + p.progress, 0) / totalProjects : 0
 
-  // Zorluk Düzeyi İstatistikleri
-  const difficultyStats = projects.reduce(
-    (acc, project) => {
-      acc[project.difficulty] = (acc[project.difficulty] || 0) + 1
-      return acc
-    },
-    {} as Record<string, number>,
-  )
+  // Kategori Dağılımı
+  const categoryCounts = projects.reduce((acc, project) => {
+    acc[project.category] = (acc[project.category] || 0) + 1
+    return acc
+  }, {})
 
-  // Teknoloji İstatistikleri
-  const technologyStats = projects.reduce(
-    (acc, project) => {
-      project.languages.forEach((lang) => {
-        acc[lang] = (acc[lang] || 0) + 1
-      })
-      return acc
-    },
-    {} as Record<string, number>,
-  )
+  // Zorluk Düzeyi Dağılımı
+  const difficultyCounts = projects.reduce((acc, project) => {
+    acc[project.difficulty] = (acc[project.difficulty] || 0) + 1
+    return acc
+  }, {})
 
-  // En çok kullanılan teknolojiler (top 10)
-  const topTechnologies = Object.entries(technologyStats)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 10)
-
-  // Ekip Performansı
-  const teamPerformance = teamMembers
-    .map((member) => ({
-      ...member,
-      completedProjects: projects.filter(
-        (p) => p.teamMembers.some((tm) => tm.id === member.id) && p.status === "Tamamlandı",
-      ).length,
-      activeProjects: projects.filter((p) => p.teamMembers.some((tm) => tm.id === member.id) && p.status === "Aktif")
-        .length,
-      projectCount: projects.filter((p) => p.teamMembers.some((tm) => tm.id === member.id)).length,
-    }))
-    .sort((a, b) => b.projectCount - a.projectCount)
-
-  // Bütçe Analizi
-  const budgetByCategory = Object.entries(categoryStats)
-    .map(([category, count]) => {
-      const categoryBudget = projects.filter((p) => p.category === category).reduce((sum, p) => sum + p.budget, 0)
-      return { category, budget: categoryBudget, count }
-    })
-    .sort((a, b) => b.budget - a.budget)
+  // Yaklaşan Deadline'lar (Son 30 gün içinde)
+  const today = new Date()
+  const upcomingDeadlines = projects.filter((p) => {
+    const deadlineDate = new Date(p.deadline)
+    const diffTime = deadlineDate.getTime() - today.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    return diffDays >= 0 && diffDays <= 30
+  }).length
 
   return (
     <div className="flex flex-col h-full">
@@ -82,293 +59,165 @@ export default function StatisticsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-xl md:text-2xl font-bold text-foreground">İstatistikler</h1>
-            <p className="text-sm md:text-base text-muted-foreground">Detaylı proje ve ekip analizi</p>
-          </div>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-            <Select defaultValue="all-time">
-              <SelectTrigger className="w-full sm:w-48">
-                <Calendar className="w-4 h-4 mr-2" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="this-week">Bu Hafta</SelectItem>
-                <SelectItem value="this-month">Bu Ay</SelectItem>
-                <SelectItem value="this-quarter">Bu Çeyrek</SelectItem>
-                <SelectItem value="this-year">Bu Yıl</SelectItem>
-                <SelectItem value="all-time">Tüm Zamanlar</SelectItem>
-              </SelectContent>
-            </Select>
-            <ExportDialog />
+            <p className="text-sm md:text-base text-muted-foreground">Proje ve ekip performansına genel bakış</p>
           </div>
         </div>
       </header>
 
+      {/* Content */}
       <div className="flex-1 overflow-auto p-4 md:p-6">
-        {/* Genel İstatistikler */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
-          <Card className="bg-card">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-card-foreground">Toplam Proje</CardTitle>
-              <FolderOpen className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-card-foreground">{totalProjects}</div>
-              <p className="text-xs text-muted-foreground">
-                <span className="text-green-600 flex items-center">
-                  <TrendingUp className="w-3 h-3 mr-1" />
-                  +12% bu ay
-                </span>
-              </p>
-            </CardContent>
-          </Card>
+        <div className="max-w-6xl mx-auto space-y-6">
+          {/* Genel Metrikler */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="bg-card text-card-foreground">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Toplam Proje</CardTitle>
+                <FolderOpen className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalProjects}</div>
+                <p className="text-xs text-muted-foreground">Tüm zamanların toplamı</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-card text-card-foreground">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Aktif Projeler</CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{activeProjects}</div>
+                <p className="text-xs text-muted-foreground">Şu anda devam eden</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-card text-card-foreground">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Tamamlanan Projeler</CardTitle>
+                <CheckCircle className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{completedProjects}</div>
+                <p className="text-xs text-muted-foreground">Başarıyla tamamlanan</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-card text-card-foreground">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Toplam Ekip Üyesi</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalTeamMembers}</div>
+                <p className="text-xs text-muted-foreground">Tüm takım üyeleri</p>
+              </CardContent>
+            </Card>
+          </div>
 
-          <Card className="bg-card">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-card-foreground">Tamamlanma Oranı</CardTitle>
-              <Target className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-card-foreground">
-                %{Math.round((completedProjects / totalProjects) * 100)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                <span className="text-green-600 flex items-center">
-                  <TrendingUp className="w-3 h-3 mr-1" />
-                  +8% geçen aya göre
-                </span>
-              </p>
-            </CardContent>
-          </Card>
+          {/* Detaylı İstatistikler */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card className="bg-card text-card-foreground">
+              <CardHeader>
+                <CardTitle>Proje İlerlemesi</CardTitle>
+                <CardDescription>Projelerin ortalama ilerleme durumu</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Ortalama İlerleme</span>
+                  <span className="text-sm font-bold">{avgProgress.toFixed(1)}%</span>
+                </div>
+                <Progress value={avgProgress} className="h-3" />
+                <div className="mt-4 space-y-2">
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <span>Aktif Projeler</span>
+                    <span>{activeProjects}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <span>Tamamlanan Projeler</span>
+                    <span>{completedProjects}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <span>Beklemede Olan Projeler</span>
+                    <span>{pendingProjects}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card className="bg-card">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-card-foreground">Ortalama İlerleme</CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-card-foreground">%{averageProgress}</div>
-              <p className="text-xs text-muted-foreground">
-                <span className="text-green-600 flex items-center">
-                  <TrendingUp className="w-3 h-3 mr-1" />
-                  +5% geçen aya göre
-                </span>
-              </p>
-            </CardContent>
-          </Card>
+            <Card className="bg-card text-card-foreground">
+              <CardHeader>
+                <CardTitle>Bütçe Analizi</CardTitle>
+                <CardDescription>Projelerin toplam ve ortalama bütçe dağılımı</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="w-4 h-4 text-green-500" />
+                      <span className="text-sm">Toplam Bütçe</span>
+                    </div>
+                    <span className="text-sm font-medium">₺{totalBudget.toLocaleString()}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-blue-500" />
+                      <span className="text-sm">Proje Başına Ortalama Bütçe</span>
+                    </div>
+                    <span className="text-sm font-medium">
+                      ₺{avgBudgetPerProject.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </span>
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CalendarDays className="w-4 h-4 text-orange-500" />
+                      <span className="text-sm">Yaklaşan Deadline'lar (30 Gün İçinde)</span>
+                    </div>
+                    <span className="text-sm font-medium">{upcomingDeadlines}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card className="bg-card">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-card-foreground">Toplam Bütçe</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-card-foreground">₺{totalBudget.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">
-                <span className="text-red-600 flex items-center">
-                  <TrendingDown className="w-3 h-3 mr-1" />
-                  -3% geçen aya göre
-                </span>
-              </p>
-            </CardContent>
-          </Card>
+            <Card className="bg-card text-card-foreground">
+              <CardHeader>
+                <CardTitle>Kategori Dağılımı</CardTitle>
+                <CardDescription>Projelerin kategorilere göre dağılımı</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {Object.entries(categoryCounts).map(([category, count]) => (
+                    <div key={category} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Code className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm">{category}</span>
+                      </div>
+                      <span className="text-sm font-medium">{count} Proje</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card text-card-foreground">
+              <CardHeader>
+                <CardTitle>Zorluk Düzeyi Dağılımı</CardTitle>
+                <CardDescription>Projelerin zorluk düzeylerine göre dağılımı</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {Object.entries(difficultyCounts).map(([difficulty, count]) => (
+                    <div key={difficulty} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm">{difficulty}</span>
+                      </div>
+                      <span className="text-sm font-medium">{count} Proje</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
-          {/* Proje Durumu Dağılımı */}
-          <Card className="bg-card">
-            <CardHeader>
-              <CardTitle className="text-card-foreground">Proje Durumu</CardTitle>
-              <CardDescription>Projelerin mevcut durumu</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                    <span className="text-sm font-medium text-card-foreground">Aktif</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">{activeProjects}</span>
-                    <Badge variant="secondary">%{Math.round((activeProjects / totalProjects) * 100)}</Badge>
-                  </div>
-                </div>
-                <Progress value={(activeProjects / totalProjects) * 100} className="h-2" />
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span className="text-sm font-medium text-card-foreground">Tamamlandı</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">{completedProjects}</span>
-                    <Badge variant="secondary">%{Math.round((completedProjects / totalProjects) * 100)}</Badge>
-                  </div>
-                </div>
-                <Progress value={(completedProjects / totalProjects) * 100} className="h-2" />
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
-                    <span className="text-sm font-medium text-card-foreground">Beklemede</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">{pendingProjects}</span>
-                    <Badge variant="secondary">%{Math.round((pendingProjects / totalProjects) * 100)}</Badge>
-                  </div>
-                </div>
-                <Progress value={(pendingProjects / totalProjects) * 100} className="h-2" />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Kategori Dağılımı */}
-          <Card className="bg-card">
-            <CardHeader>
-              <CardTitle className="text-card-foreground">Kategori Dağılımı</CardTitle>
-              <CardDescription>Proje kategorilerine göre dağılım</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {Object.entries(categoryStats).map(([category, count]) => (
-                  <div key={category}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-card-foreground">{category}</span>
-                      <span className="text-sm text-muted-foreground">{count}</span>
-                    </div>
-                    <Progress value={(count / totalProjects) * 100} className="h-2" />
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Zorluk Düzeyi */}
-          <Card className="bg-card">
-            <CardHeader>
-              <CardTitle className="text-card-foreground">Zorluk Düzeyi</CardTitle>
-              <CardDescription>Projelerin zorluk dağılımı</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {Object.entries(difficultyStats).map(([difficulty, count]) => {
-                  const colors = {
-                    Kolay: "bg-green-500",
-                    Orta: "bg-yellow-500",
-                    Zor: "bg-red-500",
-                  }
-                  return (
-                    <div key={difficulty}>
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-3 h-3 rounded-full ${colors[difficulty as keyof typeof colors]}`}></div>
-                          <span className="text-sm font-medium text-card-foreground">{difficulty}</span>
-                        </div>
-                        <span className="text-sm text-muted-foreground">{count}</span>
-                      </div>
-                      <Progress value={(count / totalProjects) * 100} className="h-2" />
-                    </div>
-                  )
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
-          {/* En Çok Kullanılan Teknolojiler */}
-          <Card className="bg-card">
-            <CardHeader>
-              <CardTitle className="text-card-foreground">Popüler Teknolojiler</CardTitle>
-              <CardDescription>En çok kullanılan programlama dilleri ve teknolojiler</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {topTechnologies.map(([tech, count], index) => (
-                  <div key={tech} className="flex items-center gap-3">
-                    <div className="w-6 h-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                      {index + 1}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-card-foreground">{tech}</span>
-                        <span className="text-sm text-muted-foreground">{count} proje</span>
-                      </div>
-                      <Progress value={(count / totalProjects) * 100} className="h-2" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Bütçe Analizi */}
-          <Card className="bg-card">
-            <CardHeader>
-              <CardTitle className="text-card-foreground">Kategori Bazında Bütçe</CardTitle>
-              <CardDescription>Her kategoriye ayrılan bütçe miktarı</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {budgetByCategory.map(({ category, budget, count }) => (
-                  <div key={category}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-card-foreground">{category}</span>
-                      <span className="text-sm text-muted-foreground">₺{budget.toLocaleString()}</span>
-                    </div>
-                    <Progress value={(budget / totalBudget) * 100} className="h-2" />
-                    <p className="text-xs text-muted-foreground mt-1">{count} proje</p>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Ekip Performansı */}
-        <Card className="bg-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-card-foreground">
-              <Award className="w-5 h-5" />
-              Ekip Performansı
-            </CardTitle>
-            <CardDescription>Ekip üyelerinin proje bazında performansı</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {teamPerformance.slice(0, 6).map((member) => (
-                <div key={member.id} className="flex items-center gap-3 p-4 rounded-lg border border-border bg-card">
-                  <Avatar className="w-12 h-12">
-                    <AvatarImage src={member.avatar || "/placeholder.svg"} />
-                    <AvatarFallback>
-                      {member.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <p className="font-medium text-sm text-card-foreground">{member.name}</p>
-                    <p className="text-xs text-muted-foreground">{member.role}</p>
-                    <div className="flex items-center gap-4 mt-2 text-xs">
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        <span className="text-muted-foreground">{member.completedProjects} tamamlandı</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                        <span className="text-muted-foreground">{member.activeProjects} aktif</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-card-foreground">{member.projectCount}</div>
-                    <div className="text-xs text-muted-foreground">toplam</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   )

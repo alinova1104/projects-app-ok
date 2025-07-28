@@ -1,8 +1,5 @@
 "use client"
-
-import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -17,10 +14,16 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, UserPlus } from "lucide-react"
-import { toast } from "sonner" // sonner'dan toast import edildi
+import { toast } from "sonner"
+import { useActionState } from "react"
+import { addTeamMember } from "@/app/team/actions"
+import { useRouter } from "next/navigation"
 
 export function AddTeamMemberDialog() {
   const [open, setOpen] = useState(false)
+  const router = useRouter()
+  const [state, formAction] = useActionState(addTeamMember, { success: false, message: "" })
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -28,30 +31,17 @@ export function AddTeamMemberDialog() {
     role: "",
     skills: "",
   })
-  // useToast kaldırıldı, doğrudan toast kullanılıyor
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-
-    // Form validation
-    if (!formData.name || !formData.email || !formData.role) {
-      toast.error("Eksik bilgi", {
-        description: "Lütfen tüm zorunlu alanları doldurun",
-      })
-      return
-    }
-
-    // Simulate API call
-    setTimeout(() => {
-      toast.success("Ekip üyesi eklendi", {
-        description: `${formData.name} başarıyla ekibe eklendi`,
-      })
-
-      // Reset form and close dialog
+  useEffect(() => {
+    if (state.success) {
+      toast.success(state.message)
       setFormData({ name: "", email: "", phone: "", role: "", skills: "" })
       setOpen(false)
-    }, 1000)
-  }
+      router.refresh() // Veriyi yeniden çekmek için
+    } else if (state.message) {
+      toast.error(state.message)
+    }
+  }, [state, router])
 
   const updateField = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -73,12 +63,15 @@ export function AddTeamMemberDialog() {
           </DialogTitle>
           <DialogDescription>Yeni bir ekip üyesi eklemek için bilgileri doldurun</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit}>
+        <form action={formAction}>
+          {" "}
+          {/* formAction buraya eklendi */}
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="name">Ad Soyad *</Label>
               <Input
                 id="name"
+                name="name" // name prop'u eklendi
                 value={formData.name}
                 onChange={(e) => updateField("name", e.target.value)}
                 placeholder="Örn: Ahmet Yılmaz"
@@ -89,6 +82,7 @@ export function AddTeamMemberDialog() {
               <Label htmlFor="email">E-posta *</Label>
               <Input
                 id="email"
+                name="email" // name prop'u eklendi
                 type="email"
                 value={formData.email}
                 onChange={(e) => updateField("email", e.target.value)}
@@ -100,6 +94,7 @@ export function AddTeamMemberDialog() {
               <Label htmlFor="phone">Telefon</Label>
               <Input
                 id="phone"
+                name="phone" // name prop'u eklendi
                 value={formData.phone}
                 onChange={(e) => updateField("phone", e.target.value)}
                 placeholder="+90 555 123 4567"
@@ -123,11 +118,13 @@ export function AddTeamMemberDialog() {
                   <SelectItem value="Project Manager">Project Manager</SelectItem>
                 </SelectContent>
               </Select>
+              <input type="hidden" name="role" value={formData.role} /> {/* Hidden input eklendi */}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="skills">Yetenekler</Label>
               <Input
                 id="skills"
+                name="skills" // name prop'u eklendi
                 value={formData.skills}
                 onChange={(e) => updateField("skills", e.target.value)}
                 placeholder="React, TypeScript, Node.js (virgülle ayırın)"

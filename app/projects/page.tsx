@@ -1,17 +1,17 @@
 "use client"
 
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, Filter, Plus, FolderOpen } from "lucide-react"
 import Link from "next/link"
-import projectsData from "@/data/projects.json"
 import { DraggableProjectCard } from "@/components/draggable-project-card"
 import { DropZone } from "@/components/drop-zone"
+import { getDb } from "@/lib/db" // Veriyi sunucuda çekmek için db'den import edildi
+import { useState } from "react" // Client component'e dönüştürmek için useState eklendi
 
 export default function ProjectsPage() {
-  const { projects } = projectsData
+  const { projects } = getDb() // Veri doğrudan sunucuda çekildi
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [selectedStatus, setSelectedStatus] = useState("all")

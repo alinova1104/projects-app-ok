@@ -1,5 +1,3 @@
-"use client"
-
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -19,8 +17,8 @@ import {
   DollarSign,
   Target,
 } from "lucide-react"
-import projectsData from "@/data/projects.json"
 import { EditProjectDialog } from "@/components/edit-project-dialog"
+import { getDb } from "@/lib/db" // Veriyi sunucuda çekmek için db'den import edildi
 
 interface ProjectDetailProps {
   params: {
@@ -29,7 +27,7 @@ interface ProjectDetailProps {
 }
 
 export default function ProjectDetail({ params }: ProjectDetailProps) {
-  const { projects } = projectsData
+  const { projects } = getDb() // Veri doğrudan sunucuda çekildi
   const project = projects.find((p) => p.id === params.id)
 
   if (!project) {
