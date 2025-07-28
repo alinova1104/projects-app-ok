@@ -1,6 +1,6 @@
-"use client" // Client Component olarak işaretlendi
+"use client"
 
-import { notFound, useParams } from "next/navigation" // useParams import edildi
+import { notFound } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -19,58 +19,21 @@ import {
   DollarSign,
   Target,
 } from "lucide-react"
+import projectsData from "@/data/projects.json"
 import { EditProjectDialog } from "@/components/edit-project-dialog"
-import { useEffect, useState } from "react"
-import { projectApi } from "@/api" // api.ts'den import edildi
-import { toast } from "sonner"
 
-export default function ProjectDetail() {
-  const params = useParams()
-  const id = params.id as string // useParams'tan id alındı
-
-  const [project, setProject] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const fetchProject = async () => {
-    setLoading(true)
-    setError(null)
-    const response = await projectApi.getProjectById(id)
-    if (response.success && response.data) {
-      setProject(response.data)
-    } else {
-      setError(response.message || "Proje yüklenirken bir hata oluştu.")
-      toast.error("Hata", { description: response.message || "Proje yüklenirken bir hata oluştu." })
-    }
-    setLoading(false)
+interface ProjectDetailProps {
+  params: {
+    id: string
   }
+}
 
-  useEffect(() => {
-    fetchProject()
-  }, [id])
-
-  if (loading) {
-    return (
-      <div className="flex flex-col h-full items-center justify-center">
-        <div className="h-16 w-16 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent" />
-        <p className="mt-4 text-muted-foreground">Proje yükleniyor...</p>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col h-full items-center justify-center text-red-500">
-        <p>{error}</p>
-        <Button onClick={() => window.location.reload()} className="mt-4">
-          Tekrar Dene
-        </Button>
-      </div>
-    )
-  }
+export default function ProjectDetail({ params }: ProjectDetailProps) {
+  const { projects } = projectsData
+  const project = projects.find((p) => p.id === params.id)
 
   if (!project) {
-    notFound() // Proje bulunamazsa Next.js'in notFound'unu kullan
+    notFound()
   }
 
   const difficultyColors = {
@@ -112,7 +75,7 @@ export default function ProjectDetail() {
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <EditProjectDialog project={project} onProjectUpdated={fetchProject} /> {/* Callback eklendi */}
+            <EditProjectDialog project={project} />
             {project.liveUrl && (
               <Button variant="outline" size="sm" className="flex-1 sm:flex-none bg-transparent" asChild>
                 <a href={project.liveUrl} target="_blank" rel="noopener noreferrer">

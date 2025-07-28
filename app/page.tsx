@@ -5,11 +5,8 @@ import { Badge } from "@/components/ui/badge"
 import { BarChart3, Users, FolderOpen, TrendingUp, AlertCircle, CheckCircle, Pause } from "lucide-react"
 import projectsData from "@/data/projects.json"
 import { ActivityFeed } from "@/components/activity-feed"
-import { redirect } from "next/navigation"
 
-export default function HomePage() {
-  redirect("/projects")
-
+export default function Dashboard() {
   const { projects, teamMembers } = projectsData
 
   // İstatistikleri hesapla

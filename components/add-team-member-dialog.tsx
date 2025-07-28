@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
@@ -14,101 +16,133 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Save } from "lucide-react"
-import { useActionState } from "react"
-import { addTeamMember } from "@/app/team/actions" // Server Action import edildi
+import { Plus, UserPlus } from "lucide-react"
 import { toast } from "sonner" // sonner'dan toast import edildi
 
 export function AddTeamMemberDialog() {
-  const [isOpen, setIsOpen] = useState(false)
-  const [state, formAction] = useActionState(addTeamMember, null)
+  const [open, setOpen] = useState(false)
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    role: "",
+    skills: "",
+  })
+  // useToast kaldırıldı, doğrudan toast kullanılıyor
 
-  // Form gönderildikten sonra toast göstermek ve dialogu kapatmak için
-  useState(() => {
-    if (state?.success) {
-      toast.success(state.message)
-      setIsOpen(false) // Dialogu kapat
-    } else if (state?.success === false) {
-      toast.error(state.message)
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+
+    // Form validation
+    if (!formData.name || !formData.email || !formData.role) {
+      toast.error("Eksik bilgi", {
+        description: "Lütfen tüm zorunlu alanları doldurun",
+      })
+      return
     }
-  }, [state])
+
+    // Simulate API call
+    setTimeout(() => {
+      toast.success("Ekip üyesi eklendi", {
+        description: `${formData.name} başarıyla ekibe eklendi`,
+      })
+
+      // Reset form and close dialog
+      setFormData({ name: "", email: "", phone: "", role: "", skills: "" })
+      setOpen(false)
+    }, 1000)
+  }
+
+  const updateField = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+  }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 w-full sm:w-auto">
           <Plus className="w-4 h-4 mr-2" />
-          Ekip Üyesi Ekle
+          Yeni Üye
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Yeni Ekip Üyesi Ekle</DialogTitle>
-          <DialogDescription>Ekibinize yeni bir üye eklemek için bilgileri doldurun.</DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            <UserPlus className="w-5 h-5" />
+            Yeni Ekip Üyesi Ekle
+          </DialogTitle>
+          <DialogDescription>Yeni bir ekip üyesi eklemek için bilgileri doldurun</DialogDescription>
         </DialogHeader>
-        <form action={formAction}>
+        <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Ad Soyad
-              </Label>
-              <Input id="name" name="name" placeholder="John Doe" className="col-span-3" required />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="email" className="text-right">
-                E-posta
-              </Label>
+            <div className="grid gap-2">
+              <Label htmlFor="name">Ad Soyad *</Label>
               <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="john.doe@example.com"
-                className="col-span-3"
+                id="name"
+                value={formData.name}
+                onChange={(e) => updateField("name", e.target.value)}
+                placeholder="Örn: Ahmet Yılmaz"
                 required
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="phone" className="text-right">
-                Telefon
-              </Label>
-              <Input id="phone" name="phone" placeholder="+90 5xx xxx xx xx" className="col-span-3" />
+            <div className="grid gap-2">
+              <Label htmlFor="email">E-posta *</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => updateField("email", e.target.value)}
+                placeholder="ahmet@example.com"
+                required
+              />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="role" className="text-right">
-                Rol
-              </Label>
-              <Select name="role" required>
-                <SelectTrigger className="col-span-3">
+            <div className="grid gap-2">
+              <Label htmlFor="phone">Telefon</Label>
+              <Input
+                id="phone"
+                value={formData.phone}
+                onChange={(e) => updateField("phone", e.target.value)}
+                placeholder="+90 555 123 4567"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="role">Rol *</Label>
+              <Select value={formData.role} onValueChange={(value) => updateField("role", value)}>
+                <SelectTrigger>
                   <SelectValue placeholder="Rol seçin" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Proje Yöneticisi">Proje Yöneticisi</SelectItem>
-                  <SelectItem value="Full-stack Geliştirici">Full-stack Geliştirici</SelectItem>
-                  <SelectItem value="Front-end Geliştirici">Front-end Geliştirici</SelectItem>
-                  <SelectItem value="Back-end Geliştirici">Back-end Geliştirici</SelectItem>
-                  <SelectItem value="UI/UX Tasarımcı">UI/UX Tasarımcı</SelectItem>
-                  <SelectItem value="Veri Bilimci">Veri Bilimci</SelectItem>
-                  <SelectItem value="Siber Güvenlik Uzmanı">Siber Güvenlik Uzmanı</SelectItem>
-                  <SelectItem value="DevOps Mühendisi">DevOps Mühendisi</SelectItem>
+                  <SelectItem value="Frontend Developer">Frontend Developer</SelectItem>
+                  <SelectItem value="Backend Developer">Backend Developer</SelectItem>
+                  <SelectItem value="Full Stack Developer">Full Stack Developer</SelectItem>
+                  <SelectItem value="UI/UX Designer">UI/UX Designer</SelectItem>
+                  <SelectItem value="Mobile Developer">Mobile Developer</SelectItem>
+                  <SelectItem value="DevOps Engineer">DevOps Engineer</SelectItem>
+                  <SelectItem value="Data Scientist">Data Scientist</SelectItem>
+                  <SelectItem value="AI Engineer">AI Engineer</SelectItem>
+                  <SelectItem value="Project Manager">Project Manager</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="skills" className="text-right">
-                Yetenekler
-              </Label>
+            <div className="grid gap-2">
+              <Label htmlFor="skills">Yetenekler</Label>
               <Input
                 id="skills"
-                name="skills"
-                placeholder="React, Node.js, Figma (virgülle ayırın)"
-                className="col-span-3"
+                value={formData.skills}
+                onChange={(e) => updateField("skills", e.target.value)}
+                placeholder="React, TypeScript, Node.js (virgülle ayırın)"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit">
-              <Save className="w-4 h-4 mr-2" />
-              Kaydet
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              İptal
+            </Button>
+            <Button
+              type="submit"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+            >
+              Ekip Üyesi Ekle
             </Button>
           </DialogFooter>
         </form>

@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
@@ -15,101 +17,146 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CalendarIcon, Plus, Save } from "lucide-react"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
-import { format } from "date-fns"
-import { cn } from "@/lib/utils"
-import { useActionState } from "react"
-import { addEvent } from "@/app/calendar/actions" // Server Action import edildi
+import { Plus, Calendar } from "lucide-react"
 import { toast } from "sonner" // sonner'dan toast import edildi
 
 export function AddEventDialog() {
-  const [isOpen, setIsOpen] = useState(false)
-  const [state, formAction] = useActionState(addEvent, null)
+  const [open, setOpen] = useState(false)
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    date: "",
+    time: "",
+    type: "",
+    project: "",
+  })
+  // useToast kaldırıldı, doğrudan toast kullanılıyor
 
-  // Form gönderildikten sonra toast göstermek ve dialogu kapatmak için
-  useState(() => {
-    if (state?.success) {
-      toast.success(state.message)
-      setIsOpen(false) // Dialogu kapat
-    } else if (state?.success === false) {
-      toast.error(state.message)
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!formData.title || !formData.date || !formData.type) {
+      toast.error("Eksik bilgi", {
+        description: "Lütfen tüm zorunlu alanları doldurun",
+      })
+      return
     }
-  }, [state])
 
-  const [date, setDate] = useState<Date | undefined>(undefined)
+    setTimeout(() => {
+      toast.success("Etkinlik eklendi", {
+        description: `${formData.title} etkinliği takvime eklendi`,
+      })
+
+      setFormData({ title: "", description: "", date: "", time: "", type: "", project: "" })
+      setOpen(false)
+    }, 1000)
+  }
+
+  const updateField = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+  }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 w-full sm:w-auto">
+        <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
           <Plus className="w-4 h-4 mr-2" />
-          Yeni Etkinlik
+          <span className="hidden sm:inline">Etkinlik Ekle</span>
+          <span className="sm:hidden">Ekle</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Yeni Etkinlik Ekle</DialogTitle>
-          <DialogDescription>Takviminize yeni bir etkinlik eklemek için bilgileri doldurun.</DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            <Calendar className="w-5 h-5" />
+            Yeni Etkinlik Ekle
+          </DialogTitle>
+          <DialogDescription>Takvime yeni bir etkinlik ekleyin</DialogDescription>
         </DialogHeader>
-        <form action={formAction}>
+        <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="title" className="text-right">
-                Başlık
-              </Label>
-              <Input id="title" name="title" placeholder="Toplantı Adı" className="col-span-3" required />
+            <div className="grid gap-2">
+              <Label htmlFor="title">Etkinlik Başlığı *</Label>
+              <Input
+                id="title"
+                value={formData.title}
+                onChange={(e) => updateField("title", e.target.value)}
+                placeholder="Örn: Sprint Planlama Toplantısı"
+                required
+              />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="description" className="text-right">
-                Açıklama
-              </Label>
-              <Textarea id="description" name="description" placeholder="Etkinlik açıklaması" className="col-span-3" />
+            <div className="grid gap-2">
+              <Label htmlFor="description">Açıklama</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => updateField("description", e.target.value)}
+                placeholder="Etkinlik detayları..."
+                rows={3}
+              />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="date" className="text-right">
-                Tarih
-              </Label>
-              <div className="col-span-3">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {date ? format(date, "PPP") : <span>Tarih seçin</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
-                  </PopoverContent>
-                </Popover>
-                <input type="hidden" name="date" value={date ? format(date, "yyyy-MM-dd") : ""} />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="date">Tarih *</Label>
+                <Input
+                  id="date"
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => updateField("date", e.target.value)}
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="time">Saat</Label>
+                <Input
+                  id="time"
+                  type="time"
+                  value={formData.time}
+                  onChange={(e) => updateField("time", e.target.value)}
+                />
               </div>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="type" className="text-right">
-                Tür
-              </Label>
-              <Select name="type" required>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Etkinlik türü seçin" />
+            <div className="grid gap-2">
+              <Label htmlFor="type">Etkinlik Türü *</Label>
+              <Select value={formData.type} onValueChange={(value) => updateField("type", value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tür seçin" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Toplantı">Toplantı</SelectItem>
-                  <SelectItem value="Deadline">Deadline</SelectItem>
-                  <SelectItem value="Etkinlik">Etkinlik</SelectItem>
-                  <SelectItem value="Tatil">Tatil</SelectItem>
+                  <SelectItem value="meeting">Toplantı</SelectItem>
+                  <SelectItem value="deadline">Deadline</SelectItem>
+                  <SelectItem value="milestone">Kilometre Taşı</SelectItem>
+                  <SelectItem value="review">İnceleme</SelectItem>
+                  <SelectItem value="presentation">Sunum</SelectItem>
+                  <SelectItem value="training">Eğitim</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="project">İlgili Proje</Label>
+              <Select value={formData.project} onValueChange={(value) => updateField("project", value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Proje seçin (opsiyonel)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ecommerce">E-Ticaret Platformu</SelectItem>
+                  <SelectItem value="fitness">Mobil Fitness Uygulaması</SelectItem>
+                  <SelectItem value="chatbot">AI Chatbot Sistemi</SelectItem>
+                  <SelectItem value="crm">CRM Sistemi</SelectItem>
+                  <SelectItem value="blog">Blog Platformu</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit">
-              <Save className="w-4 h-4 mr-2" />
-              Kaydet
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              İptal
+            </Button>
+            <Button
+              type="submit"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+            >
+              Etkinlik Ekle
             </Button>
           </DialogFooter>
         </form>

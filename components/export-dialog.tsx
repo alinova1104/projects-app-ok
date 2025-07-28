@@ -1,6 +1,5 @@
 "use client"
 
-import { Label } from "@/components/ui/label"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
@@ -13,131 +12,158 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Download } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
+import { Download, FileText, Table, Loader2 } from "lucide-react"
 import { toast } from "sonner" // sonner'dan toast import edildi
+import projectsData from "@/data/projects.json"
 
-interface ExportDialogProps {
-  data: {
-    projects: any[]
-    teamMembers: any[]
-  }
-}
-
-export function ExportDialog({ data }: ExportDialogProps) {
+export function ExportDialog() {
+  const [format, setFormat] = useState("pdf")
+  const [includeCharts, setIncludeCharts] = useState(true)
+  const [includeTeam, setIncludeTeam] = useState(true)
+  const [includeProjects, setIncludeProjects] = useState(true)
+  const [isExporting, setIsExporting] = useState(false)
   const [open, setOpen] = useState(false)
-  const [reportType, setReportType] = useState("projects")
-  const [fileFormat, setFileFormat] = useState("csv")
-  const [isLoading, setIsLoading] = useState(false)
+  // useToast kaldırıldı, doğrudan toast kullanılıyor
 
-  const generateCsv = (dataArray: any[], filename: string) => {
-    if (!dataArray || dataArray.length === 0) {
-      toast.error("Dışa aktarılacak veri bulunamadı.")
-      return
+  const generatePDFReport = () => {
+    const { projects, teamMembers } = projectsData
+
+    // PDF içeriği oluştur
+    let content = `
+# PROJE YÖNETİM RAPORU
+Tarih: ${new Date().toLocaleDateString("tr-TR")}
+
+## GENEL İSTATİSTİKLER
+- Toplam Proje: ${projects.length}
+- Aktif Proje: ${projects.filter((p) => p.status === "Aktif").length}
+- Tamamlanan Proje: ${projects.filter((p) => p.status === "Tamamlandı").length}
+- Bekleyen Proje: ${projects.filter((p) => p.status === "Beklemede").length}
+- Toplam Bütçe: ₺${projects.reduce((sum, p) => sum + p.budget, 0).toLocaleString()}
+- Ortalama İlerleme: %${Math.round(projects.reduce((sum, p) => sum + p.progress, 0) / projects.length)}
+`
+
+    if (includeProjects) {
+      content += `\n## PROJE LİSTESİ\n`
+      projects.forEach((project) => {
+        content += `
+### ${project.name}
+- Kategori: ${project.category}
+- Durum: ${project.status}
+- İlerleme: %${project.progress}
+- Zorluk: ${project.difficulty}
+- Öncelik: ${project.priority}
+- Bütçe: ₺${project.budget.toLocaleString()}
+- Deadline: ${new Date(project.deadline).toLocaleDateString("tr-TR")}
+- Açıklama: ${project.description}
+`
+      })
     }
 
-    const headers = Object.keys(dataArray[0])
-    const csvContent = [
-      headers.join(","),
-      ...dataArray.map((row) => headers.map((fieldName) => JSON.stringify(row[fieldName])).join(",")),
-    ].join("\n")
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
-    const link = document.createElement("a")
-    if (link.download !== undefined) {
-      const url = URL.createObjectURL(blob)
-      link.setAttribute("href", url)
-      link.setAttribute("download", `${filename}.csv`)
-      link.style.visibility = "hidden"
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      toast.success("CSV dosyası başarıyla indirildi!")
-    } else {
-      toast.error("Tarayıcınız dosya indirmeyi desteklemiyor.")
+    if (includeTeam) {
+      content += `\n## EKİP ÜYELERİ\n`
+      teamMembers.forEach((member) => {
+        content += `
+### ${member.name}
+- Rol: ${member.role}
+- E-posta: ${member.email}
+- Telefon: ${member.phone}
+- Proje Sayısı: ${member.projectCount}
+- Yetenekler: ${member.skills.join(", ")}
+- Katılım Tarihi: ${new Date(member.joinDate).toLocaleDateString("tr-TR")}
+`
+      })
     }
+
+    return content
   }
 
-  const generatePdf = (dataArray: any[], filename: string) => {
-    if (!dataArray || dataArray.length === 0) {
-      toast.error("Dışa aktarılacak veri bulunamadı.")
-      return
+  const generateExcelData = () => {
+    const { projects, teamMembers } = projectsData
+
+    let csvContent = "data:text/csv;charset=utf-8,"
+
+    if (includeProjects) {
+      csvContent += "PROJELER\n"
+      csvContent += "Ad,Kategori,Durum,İlerleme,Zorluk,Öncelik,Bütçe,Deadline,Açıklama\n"
+
+      projects.forEach((project) => {
+        csvContent += `"${project.name}","${project.category}","${project.status}",${project.progress},"${project.difficulty}","${project.priority}",${project.budget},"${new Date(project.deadline).toLocaleDateString("tr-TR")}","${project.description}"\n`
+      })
+
+      csvContent += "\n"
     }
 
-    // Basit bir metin tabanlı PDF simülasyonu
-    let content = `Rapor: ${filename}\n\n`
-    dataArray.forEach((item, index) => {
-      content += `--- Öğe ${index + 1} ---\n`
-      for (const key in item) {
-        content += `${key}: ${item[key]}\n`
-      }
-      content += "\n"
-    })
+    if (includeTeam) {
+      csvContent += "EKİP ÜYELERİ\n"
+      csvContent += "Ad,Rol,E-posta,Telefon,Proje Sayısı,Yetenekler,Katılım Tarihi\n"
 
-    const blob = new Blob([content], { type: "application/pdf;charset=utf-8;" })
-    const link = document.createElement("a")
-    if (link.download !== undefined) {
-      const url = URL.createObjectURL(blob)
-      link.setAttribute("href", url)
-      link.setAttribute("download", `${filename}.pdf`)
-      link.style.visibility = "hidden"
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      toast.success("PDF dosyası başarıyla indirildi!")
-    } else {
-      toast.error("Tarayıcınız dosya indirmeyi desteklemiyor.")
+      teamMembers.forEach((member) => {
+        csvContent += `"${member.name}","${member.role}","${member.email}","${member.phone}",${member.projectCount},"${member.skills.join(", ")}","${new Date(member.joinDate).toLocaleDateString("tr-TR")}"\n`
+      })
     }
+
+    return csvContent
   }
 
-  const handleExport = () => {
-    setIsLoading(true)
-    let exportData: any[] = []
-    let filename = ""
+  const downloadFile = (content: string, filename: string, mimeType: string) => {
+    const blob = new Blob([content], { type: mimeType })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  }
 
-    if (reportType === "projects") {
-      exportData = data.projects
-      filename = "projeler-raporu"
-    } else if (reportType === "teamMembers") {
-      exportData = data.teamMembers
-      filename = "ekip-uyeleri-raporu"
-    } else if (reportType === "statistics") {
-      // İstatistikler için özel bir format oluştur
-      const totalProjects = data.projects.length
-      const activeProjects = data.projects.filter((p) => p.status === "Aktif").length
-      const completedProjects = data.projects.filter((p) => p.status === "Tamamlandı").length
-      const totalBudget = data.projects.reduce((sum, p) => sum + p.budget, 0)
-      const avgProgress = totalProjects > 0 ? data.projects.reduce((sum, p) => sum + p.progress, 0) / totalProjects : 0
+  const handleExport = async () => {
+    setIsExporting(true)
 
-      exportData = [
-        {
-          "Toplam Proje": totalProjects,
-          "Aktif Proje": activeProjects,
-          "Tamamlanan Proje": completedProjects,
-          "Toplam Ekip Üyesi": data.teamMembers.length,
-          "Toplam Bütçe": totalBudget,
-          "Ortalama İlerleme (%)": avgProgress.toFixed(1),
-        },
-      ]
-      filename = "genel-istatistikler-raporu"
-    }
+    try {
+      // Simüle edilmiş export işlemi
+      await new Promise((resolve) => setTimeout(resolve, 2000))
 
-    filename += `-${new Date().toISOString().split("T")[0]}` // Tarih damgası ekle
+      const timestamp = new Date().toISOString().split("T")[0]
 
-    setTimeout(() => {
-      if (fileFormat === "csv") {
-        generateCsv(exportData, filename)
-      } else if (fileFormat === "pdf") {
-        generatePdf(exportData, filename)
+      if (format === "pdf") {
+        const content = generatePDFReport()
+        downloadFile(content, `proje-raporu-${timestamp}.txt`, "text/plain")
+
+        toast.success("PDF raporu oluşturuldu", {
+          description: `Rapor ${timestamp} tarihli olarak indirildi`,
+        })
+      } else if (format === "excel") {
+        const csvContent = generateExcelData()
+        const encodedUri = encodeURI(csvContent)
+        const link = document.createElement("a")
+        link.setAttribute("href", encodedUri)
+        link.setAttribute("download", `proje-raporu-${timestamp}.csv`)
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+
+        toast.success("Excel raporu oluşturuldu", {
+          description: `CSV formatında rapor ${timestamp} tarihli olarak indirildi`,
+        })
       }
-      setIsLoading(false)
+
       setOpen(false)
-    }, 1000) // Simülasyon süresi
+    } catch (error) {
+      toast.error("Rapor oluşturulamadı", {
+        description: "Bir hata oluştu, lütfen tekrar deneyin",
+      })
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 w-full sm:w-auto">
+        <Button variant="outline" className="bg-transparent">
           <Download className="w-4 h-4 mr-2" />
           Rapor İndir
         </Button>
@@ -148,62 +174,64 @@ export function ExportDialog({ data }: ExportDialogProps) {
             <Download className="w-5 h-5" />
             Rapor İndir
           </DialogTitle>
-          <DialogDescription>İndirmek istediğiniz rapor türünü ve formatını seçin.</DialogDescription>
+          <DialogDescription>Proje raporunuzu istediğiniz formatta indirin</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
-            <Label htmlFor="reportType">Rapor Türü</Label>
-            <Select value={reportType} onValueChange={setReportType}>
+            <Label htmlFor="format">Format</Label>
+            <Select value={format} onValueChange={setFormat}>
               <SelectTrigger>
-                <SelectValue placeholder="Rapor türü seçin" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="projects">Projeler</SelectItem>
-                <SelectItem value="teamMembers">Ekip Üyeleri</SelectItem>
-                <SelectItem value="statistics">Genel İstatistikler</SelectItem>
+                <SelectItem value="pdf">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    PDF (Metin)
+                  </div>
+                </SelectItem>
+                <SelectItem value="excel">
+                  <div className="flex items-center gap-2">
+                    <Table className="w-4 h-4" />
+                    Excel (CSV)
+                  </div>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="fileFormat">Dosya Formatı</Label>
-            <Select value={fileFormat} onValueChange={setFileFormat}>
-              <SelectTrigger>
-                <SelectValue placeholder="Dosya formatı seçin" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="csv">CSV</SelectItem>
-                <SelectItem value="pdf">PDF</SelectItem>
-              </SelectContent>
-            </Select>
+
+          <div className="space-y-3">
+            <Label>İçerik</Label>
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox id="projects" checked={includeProjects} onCheckedChange={setIncludeProjects} />
+                <Label htmlFor="projects">Proje listesi</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox id="team" checked={includeTeam} onCheckedChange={setIncludeTeam} />
+                <Label htmlFor="team">Ekip üyeleri</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox id="charts" checked={includeCharts} onCheckedChange={setIncludeCharts} />
+                <Label htmlFor="charts">İstatistikler</Label>
+              </div>
+            </div>
           </div>
         </div>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isLoading}>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={isExporting}>
             İptal
           </Button>
           <Button
-            type="submit"
             onClick={handleExport}
-            disabled={isLoading}
+            disabled={isExporting || (!includeProjects && !includeTeam && !includeCharts)}
             className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
           >
-            {isLoading ? (
-              <span className="flex items-center">
-                <svg
-                  className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
+            {isExporting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 İndiriliyor...
-              </span>
+              </>
             ) : (
               <>
                 <Download className="w-4 h-4 mr-2" />

@@ -11,20 +11,11 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Save, X, CalendarIcon } from "lucide-react"
+import { ArrowLeft, Save, X } from "lucide-react"
 import { ProjectTemplates } from "@/components/project-templates"
-import { toast } from "sonner"
-import { projectApi } from "@/api" // api.ts'den import edildi
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
-import { format } from "date-fns"
-import { cn } from "@/lib/utils"
 
 export default function NewProject() {
   const router = useRouter()
-  const [loading, setLoading] = useState(false)
-  const [deadline, setDeadline] = useState<Date | undefined>(undefined)
-
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -36,43 +27,19 @@ export default function NewProject() {
     features: "",
     priority: "",
     budget: "",
-    deadline: "", // Bu alan artık doğrudan date objesi değil, string olarak tutulacak
-    status: "Beklemede", // Varsayılan değer
-    progress: 0, // Varsayılan değer
+    deadline: "",
   })
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    // Burada normalde API'ye veri gönderilir
+    console.log("Yeni proje verisi:", formData)
+    // Başarılı olursa projeler sayfasına yönlendir
+    router.push("/projects")
+  }
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-
-    const projectData = {
-      ...formData,
-      budget: Number(formData.budget),
-      progress: Number(formData.progress),
-      languages: formData.languages
-        .split(",")
-        .map((l) => l.trim())
-        .filter(Boolean),
-      features: formData.features
-        .split(",")
-        .map((f) => f.trim())
-        .filter(Boolean),
-      deadline: deadline ? format(deadline, "yyyy-MM-dd") : "", // Tarihi formatla
-    }
-
-    const response = await projectApi.createProject(projectData)
-
-    if (response.success) {
-      toast.success(response.message || "Proje başarıyla oluşturuldu!")
-      router.push("/projects")
-    } else {
-      toast.error(response.message || "Proje oluşturulurken bir hata oluştu.")
-    }
-    setLoading(false)
   }
 
   return (
@@ -104,40 +71,11 @@ export default function NewProject() {
             </Button>
             <Button
               type="submit"
-              onClick={handleSubmit}
-              disabled={loading}
+              form="project-form"
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 flex-1 sm:flex-none"
             >
-              {loading ? (
-                <span className="flex items-center">
-                  <svg
-                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  Kaydediliyor...
-                </span>
-              ) : (
-                <>
-                  <Save className="w-4 h-4 mr-2" />
-                  Kaydet
-                </>
-              )}
+              <Save className="w-4 h-4 mr-2" />
+              Kaydet
             </Button>
           </div>
         </div>
@@ -146,7 +84,7 @@ export default function NewProject() {
       {/* Content */}
       <div className="flex-1 overflow-auto p-4 md:p-6">
         <div className="max-w-4xl mx-auto">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form id="project-form" onSubmit={handleSubmit} className="space-y-6">
             {/* Temel Bilgiler */}
             <Card>
               <CardHeader>
@@ -238,23 +176,12 @@ export default function NewProject() {
 
                 <div>
                   <Label htmlFor="deadline">Bitiş Tarihi</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !deadline && "text-muted-foreground",
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {deadline ? format(deadline, "PPP") : <span>Tarih seçin</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar mode="single" selected={deadline} onSelect={setDeadline} initialFocus />
-                    </PopoverContent>
-                  </Popover>
+                  <Input
+                    id="deadline"
+                    type="date"
+                    value={formData.deadline}
+                    onChange={(e) => handleInputChange("deadline", e.target.value)}
+                  />
                 </div>
               </CardContent>
             </Card>

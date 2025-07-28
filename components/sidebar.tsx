@@ -1,90 +1,117 @@
 "use client"
 
-import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { cn } from "@/lib/utils"
-import { LayoutDashboard, FolderOpen, Users, Calendar, BarChart, Settings, Search, Sun, Moon } from "lucide-react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { useTheme } from "next-themes"
-import { ThemeSelector } from "./theme-selector"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { ThemeToggle } from "@/components/theme-toggle"
+import { ThemeSelector } from "@/components/theme-selector"
+import {
+  BarChart3,
+  FolderOpen,
+  Users,
+  FileText,
+  Settings,
+  Plus,
+  Menu,
+  Search,
+  Calendar,
+  TrendingUp,
+} from "lucide-react"
+import { useState } from "react"
 
-export function Sidebar() {
+const navigation = [
+  { name: "Dashboard", href: "/", icon: BarChart3 },
+  { name: "Projeler", href: "/projects", icon: FolderOpen },
+  { name: "Ekip", href: "/team", icon: Users },
+  { name: "Arama", href: "/search", icon: Search },
+  { name: "Takvim", href: "/calendar", icon: Calendar },
+  { name: "İstatistikler", href: "/statistics", icon: TrendingUp },
+  { name: "Raporlar", href: "/reports", icon: FileText },
+  { name: "Ayarlar", href: "/settings", icon: Settings },
+]
+
+function SidebarContent({ onLinkClick }: { onLinkClick?: () => void }) {
   const pathname = usePathname()
-  const { theme, setTheme } = useTheme()
-
-  const navItems = [
-    { name: "Projeler", href: "/projects", icon: FolderOpen },
-    { name: "Ekip", href: "/team", icon: Users },
-    { name: "Takvim", href: "/calendar", icon: Calendar },
-    { name: "Raporlar", href: "/reports", icon: BarChart },
-    { name: "İstatistikler", href: "/statistics", icon: LayoutDashboard },
-    { name: "Arama", href: "/search", icon: Search },
-    { name: "Ayarlar", href: "/settings", icon: Settings },
-  ]
 
   return (
-    <aside className="group flex h-full flex-col border-r bg-background text-foreground transition-all duration-300 ease-in-out hover:w-64 w-16">
-      <div className="flex h-20 items-center justify-center border-b px-4">
-        <Link href="/" className="flex items-center gap-2">
-          <img src="/placeholder-logo.svg" alt="Logo" className="h-8 w-8" />
-          <span className="text-xl font-bold opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-            Proje Yönetimi
-          </span>
-        </Link>
-      </div>
-      <nav className="flex-1 overflow-y-auto py-4">
-        <ul className="space-y-2 px-3">
-          {navItems.map((item) => (
-            <li key={item.name}>
-              <TooltipProvider>
-                <Tooltip delayDuration={100}>
-                  <TooltipTrigger asChild>
-                    <Link
-                      href={item.href}
-                      className={cn(
-                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-muted",
-                        pathname.startsWith(item.href) ? "bg-muted text-primary" : "text-muted-foreground",
-                      )}
-                    >
-                      <item.icon className="h-5 w-5 flex-shrink-0" />
-                      <span className="whitespace-nowrap opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                        {item.name}
-                      </span>
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="group-hover:hidden">
-                    {item.name}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </li>
-          ))}
-        </ul>
-      </nav>
-      <div className="flex items-center justify-center border-t p-4">
-        <TooltipProvider>
-          <Tooltip delayDuration={100}>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9"
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              >
-                {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-                <span className="sr-only">Temayı Değiştir</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="group-hover:hidden">
-              Temayı Değiştir
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-        <div className="ml-2 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-          <ThemeSelector />
+    <div className="flex flex-col h-full bg-background border-r">
+      <div className="p-6 border-b border-border">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+              <FolderOpen className="w-4 h-4 text-white" />
+            </div>
+            <h1 className="text-xl font-bold text-foreground">ProjeHub</h1>
+          </div>
+          <div className="flex items-center gap-1">
+            <ThemeSelector />
+            <ThemeToggle />
+          </div>
         </div>
       </div>
-    </aside>
+
+      <nav className="flex-1 p-4">
+        <div className="space-y-2">
+          {navigation.map((item) => {
+            const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))
+            return (
+              <Button
+                key={item.name}
+                variant="ghost"
+                className={`w-full justify-start ${
+                  isActive
+                    ? "bg-primary/10 text-primary hover:bg-primary/20"
+                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                }`}
+                asChild
+              >
+                <Link href={item.href} onClick={onLinkClick}>
+                  <item.icon className="w-4 h-4 mr-3" />
+                  {item.name}
+                </Link>
+              </Button>
+            )
+          })}
+        </div>
+
+        <div className="mt-8">
+          <Button
+            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+            asChild
+          >
+            <Link href="/projects/new" onClick={onLinkClick}>
+              <Plus className="w-4 h-4 mr-2" />
+              Yeni Proje
+            </Link>
+          </Button>
+        </div>
+      </nav>
+    </div>
+  )
+}
+
+export function Sidebar() {
+  return (
+    <div className="hidden md:flex w-64">
+      <SidebarContent />
+    </div>
+  )
+}
+
+export function MobileSidebar() {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="sm" className="md:hidden">
+          <Menu className="w-5 h-5" />
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="left" className="p-0 w-64">
+        <SidebarContent onLinkClick={() => setOpen(false)} />
+      </SheetContent>
+    </Sheet>
   )
 }

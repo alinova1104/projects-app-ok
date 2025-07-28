@@ -15,139 +15,121 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { KeyRound, Save } from "lucide-react"
-import { toast } from "sonner"
+import { Shield } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 export function ChangePasswordDialog() {
-  const [isOpen, setIsOpen] = useState(false)
-  const [currentPassword, setCurrentPassword] = useState("")
-  const [newPassword, setNewPassword] = useState("")
-  const [confirmNewPassword, setConfirmNewPassword] = useState("")
-  const [loading, setLoading] = useState(false)
+  const [open, setOpen] = useState(false)
+  const [formData, setFormData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  })
+  const { toast } = useToast()
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
 
-    if (newPassword !== confirmNewPassword) {
-      toast.error("Hata", { description: "Yeni şifreler eşleşmiyor." })
-      setLoading(false)
+    if (!formData.currentPassword || !formData.newPassword || !formData.confirmPassword) {
+      toast({
+        title: "Eksik bilgi",
+        description: "Lütfen tüm alanları doldurun",
+        type: "error",
+      })
       return
     }
 
-    // Simüle edilmiş API çağrısı
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    // Gerçek bir uygulamada burada şifre değiştirme API'si çağrılır
-    // Örneğin: const response = await authApi.changePassword(currentPassword, newPassword);
-    const success = true // Simülasyon için her zaman başarılı
-
-    if (success) {
-      toast.success("Şifre güncellendi", {
-        description: "Şifreniz başarıyla değiştirildi.",
+    if (formData.newPassword !== formData.confirmPassword) {
+      toast({
+        title: "Şifreler eşleşmiyor",
+        description: "Yeni şifre ve onay şifresi aynı olmalıdır",
+        type: "error",
       })
-      setIsOpen(false)
-      setCurrentPassword("")
-      setNewPassword("")
-      setConfirmNewPassword("")
-    } else {
-      toast.error("Şifre güncellenemedi", {
-        description: "Mevcut şifreniz yanlış veya bir hata oluştu.",
-      })
+      return
     }
-    setLoading(false)
+
+    if (formData.newPassword.length < 6) {
+      toast({
+        title: "Şifre çok kısa",
+        description: "Şifre en az 6 karakter olmalıdır",
+        type: "error",
+      })
+      return
+    }
+
+    setTimeout(() => {
+      toast({
+        title: "Şifre değiştirildi",
+        description: "Şifreniz başarıyla güncellendi",
+        type: "success",
+      })
+
+      setFormData({ currentPassword: "", newPassword: "", confirmPassword: "" })
+      setOpen(false)
+    }, 1000)
+  }
+
+  const updateField = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">
-          <KeyRound className="w-4 h-4 mr-2" />
+        <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 bg-transparent">
           Şifre Değiştir
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <KeyRound className="w-5 h-5" />
+            <Shield className="w-5 h-5" />
             Şifre Değiştir
           </DialogTitle>
-          <DialogDescription>Şifrenizi güncellemek için aşağıdaki alanları doldurun.</DialogDescription>
+          <DialogDescription>Güvenliğiniz için güçlü bir şifre seçin</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="currentPassword" className="text-right">
-                Mevcut Şifre
-              </Label>
+            <div className="grid gap-2">
+              <Label htmlFor="currentPassword">Mevcut Şifre</Label>
               <Input
                 id="currentPassword"
                 type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                className="col-span-3"
-                required
+                value={formData.currentPassword}
+                onChange={(e) => updateField("currentPassword", e.target.value)}
+                placeholder="Mevcut şifrenizi girin"
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="newPassword" className="text-right">
-                Yeni Şifre
-              </Label>
+            <div className="grid gap-2">
+              <Label htmlFor="newPassword">Yeni Şifre</Label>
               <Input
                 id="newPassword"
                 type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="col-span-3"
-                required
+                value={formData.newPassword}
+                onChange={(e) => updateField("newPassword", e.target.value)}
+                placeholder="Yeni şifrenizi girin"
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="confirmNewPassword" className="text-right">
-                Yeni Şifre (Tekrar)
-              </Label>
+            <div className="grid gap-2">
+              <Label htmlFor="confirmPassword">Yeni Şifre (Tekrar)</Label>
               <Input
-                id="confirmNewPassword"
+                id="confirmPassword"
                 type="password"
-                value={confirmNewPassword}
-                onChange={(e) => setConfirmNewPassword(e.target.value)}
-                className="col-span-3"
-                required
+                value={formData.confirmPassword}
+                onChange={(e) => updateField("confirmPassword", e.target.value)}
+                placeholder="Yeni şifrenizi tekrar girin"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={loading}>
-              {loading ? (
-                <span className="flex items-center">
-                  <svg
-                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  Kaydediliyor...
-                </span>
-              ) : (
-                <>
-                  <Save className="w-4 h-4 mr-2" />
-                  Kaydet
-                </>
-              )}
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              İptal
+            </Button>
+            <Button
+              type="submit"
+              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
+            >
+              Şifre Değiştir
             </Button>
           </DialogFooter>
         </form>
