@@ -6,17 +6,16 @@ import { Sidebar, MobileSidebar } from "@/components/sidebar"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { ThemeSelector } from "@/components/theme-selector"
-import { ToastProvider } from "@/hooks/use-toast"
-import { ToastContainerComponent } from "@/components/toast-container"
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts"
 import { DragDropProvider } from "@/components/drag-drop-provider"
+import { Toaster } from "@/components/ui/toaster" // Sonner Toaster'ı import et
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "ProjeHub - Proje Yönetim Sistemi",
   description: "Modern proje yönetim uygulaması",
-    generator: 'v0.dev'
+  generator: "v0.dev",
 }
 
 export default function RootLayout({
@@ -28,32 +27,32 @@ export default function RootLayout({
     <html lang="tr" suppressHydrationWarning className="theme-blue">
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <ToastProvider>
-            <DragDropProvider>
-              <div className="flex h-screen bg-background">
-                <Sidebar />
-                <div className="flex-1 flex flex-col overflow-hidden">
-                  {/* Mobile Header */}
-                  <div className="md:hidden bg-background border-b border-border px-4 py-3 flex items-center justify-between">
-                    <MobileSidebar />
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-md flex items-center justify-center">
-                        <span className="text-white text-xs font-bold">P</span>
-                      </div>
-                      <span className="font-semibold text-foreground">ProjeHub</span>
+          {/* ToastProvider kaldırıldı */}
+          <DragDropProvider>
+            <div className="flex h-screen bg-background">
+              <Sidebar />
+              <div className="flex-1 flex flex-col overflow-hidden">
+                {/* Mobile Header */}
+                <div className="md:hidden bg-background border-b border-border px-4 py-3 flex items-center justify-between">
+                  <MobileSidebar />
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-md flex items-center justify-center">
+                      <span className="text-white text-xs font-bold">P</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <ThemeSelector />
-                      <ThemeToggle />
-                    </div>
+                    <span className="font-semibold text-foreground">ProjeHub</span>
                   </div>
-                  <main className="flex-1 overflow-hidden">{children}</main>
+                  <div className="flex items-center gap-1">
+                    <ThemeSelector />
+                    <ThemeToggle />
+                  </div>
                 </div>
+                <main className="flex-1 overflow-hidden">{children}</main>
               </div>
-              <KeyboardShortcuts />
-              <ToastContainerComponent />
-            </DragDropProvider>
-          </ToastProvider>
+            </div>
+            <KeyboardShortcuts />
+            <Toaster /> {/* Sonner Toaster eklendi */}
+          </DragDropProvider>
+          {/* ToastContainerComponent kaldırıldı */}
         </ThemeProvider>
       </body>
     </html>

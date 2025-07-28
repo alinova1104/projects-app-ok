@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Calendar } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner" // sonner'dan toast import edildi
 
 export function AddEventDialog() {
   const [open, setOpen] = useState(false)
@@ -30,25 +30,21 @@ export function AddEventDialog() {
     type: "",
     project: "",
   })
-  const { toast } = useToast()
+  // useToast kaldırıldı, doğrudan toast kullanılıyor
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!formData.title || !formData.date || !formData.type) {
-      toast({
-        title: "Eksik bilgi",
+      toast.error("Eksik bilgi", {
         description: "Lütfen tüm zorunlu alanları doldurun",
-        type: "error",
       })
       return
     }
 
     setTimeout(() => {
-      toast({
-        title: "Etkinlik eklendi",
+      toast.success("Etkinlik eklendi", {
         description: `${formData.title} etkinliği takvime eklendi`,
-        type: "success",
       })
 
       setFormData({ title: "", description: "", date: "", time: "", type: "", project: "" })

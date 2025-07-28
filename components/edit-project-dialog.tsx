@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Edit } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner" // sonner'dan toast import edildi
 
 interface EditProjectDialogProps {
   project: any
@@ -37,16 +37,14 @@ export function EditProjectDialog({ project }: EditProjectDialogProps) {
     budget: project.budget.toString(),
     deadline: project.deadline,
   })
-  const { toast } = useToast()
+  // useToast kaldırıldı, doğrudan toast kullanılıyor
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     setTimeout(() => {
-      toast({
-        title: "Proje güncellendi",
+      toast.success("Proje güncellendi", {
         description: `${formData.name} projesi başarıyla güncellendi`,
-        type: "success",
       })
 
       setOpen(false)

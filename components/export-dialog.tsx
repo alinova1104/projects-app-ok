@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Download, FileText, Table, Loader2 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner" // sonner'dan toast import edildi
 import projectsData from "@/data/projects.json"
 
 export function ExportDialog() {
@@ -25,7 +25,7 @@ export function ExportDialog() {
   const [includeProjects, setIncludeProjects] = useState(true)
   const [isExporting, setIsExporting] = useState(false)
   const [open, setOpen] = useState(false)
-  const { toast } = useToast()
+  // useToast kaldırıldı, doğrudan toast kullanılıyor
 
   const generatePDFReport = () => {
     const { projects, teamMembers } = projectsData
@@ -132,10 +132,8 @@ Tarih: ${new Date().toLocaleDateString("tr-TR")}
         const content = generatePDFReport()
         downloadFile(content, `proje-raporu-${timestamp}.txt`, "text/plain")
 
-        toast({
-          title: "PDF raporu oluşturuldu",
+        toast.success("PDF raporu oluşturuldu", {
           description: `Rapor ${timestamp} tarihli olarak indirildi`,
-          type: "success",
         })
       } else if (format === "excel") {
         const csvContent = generateExcelData()
@@ -147,19 +145,15 @@ Tarih: ${new Date().toLocaleDateString("tr-TR")}
         link.click()
         document.body.removeChild(link)
 
-        toast({
-          title: "Excel raporu oluşturuldu",
+        toast.success("Excel raporu oluşturuldu", {
           description: `CSV formatında rapor ${timestamp} tarihli olarak indirildi`,
-          type: "success",
         })
       }
 
       setOpen(false)
     } catch (error) {
-      toast({
-        title: "Rapor oluşturulamadı",
+      toast.error("Rapor oluşturulamadı", {
         description: "Bir hata oluştu, lütfen tekrar deneyin",
-        type: "error",
       })
     } finally {
       setIsExporting(false)

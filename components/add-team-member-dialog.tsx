@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, UserPlus } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner" // sonner'dan toast import edildi
 
 export function AddTeamMemberDialog() {
   const [open, setOpen] = useState(false)
@@ -28,27 +28,23 @@ export function AddTeamMemberDialog() {
     role: "",
     skills: "",
   })
-  const { toast } = useToast()
+  // useToast kaldırıldı, doğrudan toast kullanılıyor
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     // Form validation
     if (!formData.name || !formData.email || !formData.role) {
-      toast({
-        title: "Eksik bilgi",
+      toast.error("Eksik bilgi", {
         description: "Lütfen tüm zorunlu alanları doldurun",
-        type: "error",
       })
       return
     }
 
     // Simulate API call
     setTimeout(() => {
-      toast({
-        title: "Ekip üyesi eklendi",
+      toast.success("Ekip üyesi eklendi", {
         description: `${formData.name} başarıyla ekibe eklendi`,
-        type: "success",
       })
 
       // Reset form and close dialog

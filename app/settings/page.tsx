@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { User, Bell, Shield, Palette, Save, Upload } from "lucide-react"
 import { ChangePasswordDialog } from "@/components/change-password-dialog"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner" // sonner'dan toast import edildi
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState({
@@ -37,14 +37,12 @@ export default function SettingsPage() {
     twoFactorAuth: false,
     sessionTimeout: "30",
   })
-  const { toast } = useToast()
+  // useToast kaldırıldı, doğrudan toast kullanılıyor
 
   const handleSave = () => {
     // Burada normalde API'ye ayarlar gönderilir
-    toast({
-      title: "Ayarlar kaydedildi",
+    toast.success("Ayarlar kaydedildi", {
       description: "Tüm ayarlarınız başarıyla güncellendi",
-      type: "success",
     })
   }
 
@@ -53,10 +51,8 @@ export default function SettingsPage() {
   }
 
   const handlePhotoUpload = () => {
-    toast({
-      title: "Fotoğraf yükleniyor",
+    toast.info("Fotoğraf yükleniyor", {
       description: "Profil fotoğrafınız güncelleniyor",
-      type: "success",
     })
   }
 
